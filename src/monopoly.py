@@ -1,7 +1,7 @@
 """
 Monopoly Implementation
 """
-from typing import List, Tuple, Optional, Set, Callable, Dict
+from typing import List, Tuple, Optional, Set, Callable, Dict, Union
 import random
 import copy
 
@@ -10,6 +10,12 @@ A png in the form images/image-name.png, used to pull an image from the images
 directory with pygame
 """
 imagetype = str
+
+"""
+A Type representing one of the game tiles
+"""
+GameTileType = Union["Property", "Railroad", "Utility", 
+    "Community_Chest_Tile", "Chance_Tile", "Event_Tile"]
 
 # Tile Base Class
 class Tile():
@@ -166,7 +172,7 @@ class Railroad(Tile):
         super().__init__(name, pos, image)
         self.price = 200
         self.propnum = propnum
-        self.owner: Optional("Player") = None
+        self.owner: Optional["Player"] = None
 
         self.num_owned = 1
         self.morgage_price = 100
@@ -358,8 +364,67 @@ class Player():
         self.pnum = pnum
         self.money = money
         self.proplist: List[int] = []
-        self.jail = -1
+        self.jail = 0
         self.get_out = False
+
+
+# Class to represent an auction
+
+class Auction():
+    def __init__(self, prop: Property, game: "Monopoly"):
+        self.saveturn = copy.deepcopy(game.turn)
+        self.active_players = copy.deepcopy(game.active_players)
+        self.inactive_players = copy.deepcopy(game.inactive_players)
+        self.game = game
+        self.prop = prop
+        self.game.isauction = True
+        self.current_bid = 0
+    
+    def bid(self, val: int):
+        assert self.game.auction, "There is no current auction happening"
+        assert self.game.player_turn.money >= val, "You do not have enough money"
+        assert val > self.current_bid, "You must bid more than the current bid"
+        
+        self.current_bid = val
+        
+        self.game.turn = self.game.turn % self.game.num_players + 1 
+        
+        while self.game.turn not in self.active_players:
+            self.game.turn = self.turn % self.game.num_players + 1
+        
+        self.game.player_turn = self.game.pdict[self.game.turn]
+ 
+    
+    def quit_auction(self):
+        self.active_players.remove(self.game.turn)
+        self.inactive_players.append(self.game.turn)
+        if len(self.active_players) == 1:
+            self.game.turn = self.game.turn % self.game.num_players + 1 
+        
+            while self.game.turn not in self.active_players:
+                self.game.turn = self.turn % self.game.num_players + 1
+            
+            self.game.player_turn = self.game.pdict[self.game.turn]
+
+            self.prop.owner = self.game.player_turn
+            self.game.player_turn.money -= self.current_bid
+            self.game.player_turn.proplist.append(prop.pnum)
+
+            self.game.isauction = False
+            self.game.auction = None
+            
+
+            self.game.turn = self.saveturn
+            self.game.player_turn = self.game.pdict[self.saveturn]
+
+        else:
+            self.game.turn = self.game.turn % self.game.num_players + 1 
+        
+            while self.game.turn not in self.active_players:
+                self.game.turn = self.turn % self.game.num_players + 1
+            
+            self.game.player_turn = self.game.pdict[self.game.turn]
+
 
 
 
@@ -383,7 +448,17 @@ class Monopoly():
         self.houses = 32
         self.hotels = 12
         self.board = copy.deepcopy(STARTBOARD)
-        self.prop_dict = copy.deepcopy(PROPDICT)
+
+        
+        self.prop_dict = {}
+        for quadrant in self.board:
+            for tile in quadrant:
+                if (isinstance(tile, Property) 
+                    or isinstance(tile, Railroad) 
+                    or isinstance(tile, Utility)):
+
+                    self.prop_dict[tile.propnum] = tile
+
         self.center_money = 0
         self.turn_count = 0    
         self.active_players = []
@@ -392,6 +467,8 @@ class Monopoly():
         self.turn_taken = False
         
         
+        self.auction = None
+        self.isauction = False
 
         self.chance_deck = CHANCE_DECK
         self.chance_order = [i for i in range(len(CHANCE_DECK.keys()))]
@@ -410,38 +487,74 @@ class Monopoly():
         
         self.player_turn = self.pdict[1]
 
+    def make_auction(self, prop: Property):
+        self.auction = Auction(prop, self)
+    
+    def bid(self, bid: int):
+        assert self.isauction, "There is no auction currently happening"
+        self.auction.bid(bid)
+    def withdraw(self):
+        assert self.isauction, "There is no auction currently happening"
+        self.auction.quit_auction()
+    def start_auction(self):
+        cur_tile = self.current_tile()
+        assert (isinstance(cur_tile, Property) 
+            or isinstance(cur_tile, Railroad) 
+            or isinstance(cur_tile, Utility)), "Not a valid tile to auction"
 
-    def buy_property(self, player: Player, propnum: int):
+        self.make_auction(self.current_tile())
+
+
+
+
+    def current_tile(self) -> GameTileType:
+        
+
+        player = self.player_turn
+        
+        pnum = player.pnum
+        cloc = self.ploc[pnum]
+
+        quad, dist = cloc
+       
+        return self.board[quad][dist]
+
+    def buy_property(self) -> None:
+        cur_tile = self.current_tile()
+        
+        assert (isinstance(cur_tile, Property) 
+            or isinstance(cur_tile, Railroad) 
+            or isinstance(cur_tile, Utility)), "Cannot Buy This Tile"
+        
+
+
+        propnum = cur_tile.propnum
         prop = self.prop_dict[propnum]
-        player.money -= prop.price
+        
+        assert prop.owner is None, "Can't buy an owned property"
+
+        self.player_turn.money -= prop.price
 
         if 23 <= propnum <= 24:
             for i in [23, 24]:
-                if i in player.proplist:
+                if i in self.player_turn.proplist:
                     self.prop_dict[i].both = True
                     self.prop_dict[propnum].both = True
 
         elif 25 <= propnum <= 28:
             for i in [25,26,27,28]:
-                if i in player.proplist:
+                if i in self.player_turn.proplist:
                     self.prop_dict[i].num_owned += 1
                     prop.num_owned += 1
 
-        prop.owner = player
-        player.proplist.append(propnum)
+        prop.owner = self.player_turn
+        self.player_turn.proplist.append(propnum)
 
     def property_landing(self, prop):
-        if prop.owner is None:
-            
-            buy = True
-            
-            if buy:
-                self.buy_property(self.player_turn, prop.propnum)
-        
-        else:
-            prop.owner += prop.rent
-            landing_player.money -= prop.rent 
+        if prop.owner is not None:
 
+            prop.owner.money += prop.rent
+            landing_player.money -= prop.rent 
 
     def community_chest_landing(self):
         cnum = self.community_chest_order.pop(0)
@@ -482,7 +595,7 @@ class Monopoly():
         
         self.ploc[self.turn] = (new_quad, new_dist)
 
-        landed = self.board[new_quad][new_dist]
+        landed = self.current_tile()
 
         if isinstance(landed, Property) or isinstance(landed, Utility) or isinstance(landed, Railroad):
             self.property_landing(landed)
@@ -511,31 +624,43 @@ class Monopoly():
             self.center_money += 50
 
     def take_turn(self) -> None:
+        assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
+        assert not self.turn_taken, "Turn has already been taken"        
+        assert not self.done, "Game is Over"
         
-        if self.turn_taken:
-            return        
-        if self.done:
-            raise AssertionError("Game is Over")
+
         
+        cur_tile = self.current_tile()
+        
+        if (isinstance(cur_tile, Property) 
+            or isinstance(cur_tile, Utility) 
+            or isinstance(cur_tile, Railroad)):
+            assert not cur_tile.owner is None, "You must either start an auction or purchase the current property"
+
         self.roll_dice()
         
         if self.d1 != self.d2:
             self.turn_count = 0
+            self.turn_taken = True
+
         
         if self.d1 == self.d2:
-            if self.player_turn.jail != -1:
-                self.player_turn.jail = -1
+            if self.player_turn.jail != 0:
+                self.player_turn.jail = 0
                 self.turn_count = 0
+                self.turn_taken = True
             else:
                 self.turn_count += 1  
                 
                 if self.turn_count == 3:
                     self.send_jail()
                     self.turn_count = 0
-                    return        
+                    return
+            
+
 
         
-        if 0 <= self.player_turn.jail <= 1:
+        if 1 <= self.player_turn.jail <= 2:
             self.turn_taken = True
             return
         
@@ -547,16 +672,13 @@ class Monopoly():
        
         self.apply_move()
 
-        if self.turn_count == 0:
-            self.turn_taken = True
     def in_debt(self) -> bool:
         return self.player_turn.money < 0 
     
     def bankruptcy(self) -> None:
         
-        cquad, cdist = self.ploc[self.turn]
         
-        cur_tile = self.board[cquad][cdist]
+        cur_tile = self.current_tile()
             
         if (isinstance(cur_tile, Event_Tile)
             or isinstance(cur_tile, Chance_Tile) 
@@ -573,7 +695,7 @@ class Monopoly():
                 prop = self.prop_dict[pnum]
                 prop.owner = bankrupter
                 prop.morgaged = False
-                # Once auctions are added in, auction each property instead
+                
         
 
         else: 
@@ -618,6 +740,8 @@ class Monopoly():
     
     def build_house(self, propnum: int):
         
+        assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
+
         assert propnum in self.player_turn.proplist, ("You don't own this Property")
         
         assert 1 <= propnum <= 22, "You can't build on non-color properties"
@@ -669,6 +793,9 @@ class Monopoly():
         self.player_turn.money -= prop.house_price
     
     def sell_house(self, propnum):
+        
+        assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
+
         assert propnum in self.player_turn.proplist, "You don't own this Property"
         
         assert 1 <= propnum <= 22, "You can't build on non-color properties"
@@ -692,21 +819,41 @@ class Monopoly():
             
 
     def end_turn(self) -> None:
-        if not self.turn_taken:
-            raise TurnTakenError("Turn Hasn't Been Taken")
+
+
+
+
+
+        assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
+        cur_tile = self.current_tile()
+        
+        if (isinstance(cur_tile, Property) 
+            or isinstance(cur_tile, Utility) 
+            or isinstance(cur_tile, Railroad)):
+            assert not cur_tile.owner is None, "You must either start an auction or purchase the current property"
+                
+
+
+
+        assert self.turn_count == 0, "You rolled doubles, you have to take another turn"
+        assert self.turn_taken, "Your Turn Hasn't Been Taken"
         
         if self.in_debt():
+            bankrupt = True
+            
             for pnum in self.player_turn.proplist:
                 prop = self.prop_dict[pnum]
-                if (not prop.morgaged or 
-                    (isinstance(prop, Property) and prop.houses != 0)):
+                bankrupt = bankrupt and prop.morgaged
 
+                if isinstance(prop, Property):
+                    bankrupt = bankrupt and (prop.houses == 0)
+                
+                if not bankrupt:
                     raise NegativeMoneyError(
                     f"{self.player_turn.pnum} is in debt, morgage properties " +
                     "and sell houses (or trade for money), until your balance" +
                     " is positive or all of your properties are morgaged and" +
                         " houses are sold")
-                
             
             self.bankruptcy()
         
@@ -728,11 +875,6 @@ class Monopoly():
 
 class NegativeMoneyError(Exception):
     pass
-class TurnTakenError(Exception):
-    pass
-
-
-        
 
     
         
