@@ -43,17 +43,21 @@ class Property(Tile):
         
         self.house_price = hp
 
-        self.house = 0
+        self.houses = 0
         self.owner: Optional("Player") = None
         self.morgage_price = cost // 2
         self.morgaged = False
     
     def rent(self) -> int:
-        return self.rents[self.house]
+        
+        if self.morgaged:
+            return 0
+        else:
+            return self.rents[self.houses]
     def build_house(self) -> None:
-        self.house += 1
+        self.houses += 1
     def remove_house(self) -> None:
-        self.house -= 1
+        self.houses -= 1
 
 # Brown Properties
 mediterranean_ave = Property("Mediterranean Avenue", (1, 1), 
@@ -139,8 +143,10 @@ class Utility(Tile):
         self.morgaged = False
 
     def rent(self, dieroll: int) -> int:
-        
-        if self.both:
+        if self.morgaged:
+            return 0
+
+        elif self.both:
             return dieroll * 10
         
         else:
@@ -172,7 +178,10 @@ class Railroad(Tile):
             4: 200}
         
     def rent(self) -> int:
-        return self.rents[self.num_owned]
+        if self.morgaged:
+            return 0
+        else:
+            return self.rents[self.num_owned]
 
 READING_RAILROAD = Railroad("Reading Railroad", (0, 4), "railroad.png",
     25)
@@ -215,15 +224,15 @@ def go_tile(game: "Monopoly"):
 def jail_tile(game:"Monopoly"):
     pass
 def free_parking(game: "Monopoly"):
-    game.pdict[game.turn].money += center_money
+    game.player_turn.money += game.center_money
     game.center_money = 0
 def go_to_jail_tile(game: "Monopoly"):
     game.send_jail()
 def income_tax(game: "Monopoly"):
-    game.pdict[game.turn].money -= 200
+    game.player_turn.money -= 200
     game.center_money += 200
 def luxury_tax(game: "Monopoly"):
-    game.pdict[game.turn].money -= 75
+    game.player_turn.money -= 75
     game.center_money += 200
 
 GO_TILE = Event_Tile("Go", (3,9), "go.png", go_tile)
@@ -311,7 +320,7 @@ def advance_to_go(game: "Monopoly"):
 def go_to_jail(game: "Monopoly"):
     game.send_jail()
 def school_tax(game: "Monopoly"):
-    game.pdict[game.turn].money -= 150
+    game.player_turn.money -= 150
     game.center_money += 150
 
 CHANCE_DECK = {
@@ -382,6 +391,7 @@ class Monopoly():
         self.done = False    
         self.turn_taken = False
         
+        
 
         self.chance_deck = CHANCE_DECK
         self.chance_order = [i for i in range(len(CHANCE_DECK.keys()))]
@@ -397,8 +407,11 @@ class Monopoly():
             self.pdict[i] = Player(i, startcash)
             self.ploc[i] = (3, 9)
             self.active_players.append(i)
-    
-    def buy_property(self, player, propnum):
+        
+        self.player_turn = self.pdict[1]
+
+
+    def buy_property(self, player: Player, propnum: int):
         prop = self.prop_dict[propnum]
         player.money -= prop.price
 
@@ -423,10 +436,12 @@ class Monopoly():
             buy = True
             
             if buy:
-                self.buy_property(self.pdict[self.turn], prop.propnum)
+                self.buy_property(self.player_turn, prop.propnum)
         
         else:
+            prop.owner += prop.rent
             landing_player.money -= prop.rent 
+
 
     def community_chest_landing(self):
         cnum = self.community_chest_order.pop(0)
@@ -479,31 +494,28 @@ class Monopoly():
             self.event_tile_landing(landed)
     
     def passgo(self):
-        self.pdict[self.turn].money += 200
+        self.player_turn.money += 200
     
     def send_jail(self):
-        player = self.pdict[self.turn]
-        player.jail += 1
+        
+        self.player_turn.jail += 1
         self.ploc[self.turn] = (1,9)
         self.turn_taken = True
 
     def exit_jail(self):
-        player = self.pdict[self.turn]
-        if player.get_out:
-            player.get_out = False
+        if self.player_turn.get_out:
+            self.player_turn.get_out = False
             return
         else:
-            player.money -= 50 
+            self.player_turn.money -= 50 
             self.center_money += 50
 
     def take_turn(self) -> None:
         
         if self.turn_taken:
-            return
-        
-        player = self.pdict[self.turn]
-        
-        
+            return        
+        if self.done:
+            raise AssertionError("Game is Over")
         
         self.roll_dice()
         
@@ -511,8 +523,8 @@ class Monopoly():
             self.turn_count = 0
         
         if self.d1 == self.d2:
-            if player.jail != -1:
-                player.jail = -1
+            if self.player_turn.jail != -1:
+                self.player_turn.jail = -1
                 self.turn_count = 0
             else:
                 self.turn_count += 1  
@@ -523,11 +535,11 @@ class Monopoly():
                     return        
 
         
-        if 0 <= player.jail <= 1:
+        if 0 <= self.player_turn.jail <= 1:
             self.turn_taken = True
             return
         
-        if player.jail == 3:
+        if self.player_turn.jail == 3:
             self.exit_jail()
         
 
@@ -537,6 +549,188 @@ class Monopoly():
 
         if self.turn_count == 0:
             self.turn_taken = True
+    def in_debt(self) -> bool:
+        return self.player_turn.money < 0 
+    
+    def bankruptcy(self) -> None:
+        
+        cquad, cdist = self.ploc[self.turn]
+        
+        cur_tile = self.board[cquad][cdist]
+            
+        if (isinstance(cur_tile, Event_Tile)
+            or isinstance(cur_tile, Chance_Tile) 
+            or isinstance(cur_tile, Community_Chest_Tile)):
+            
+            bankrupter = None 
+        else:
+            bankrupter = cur_tile.owner
+
+
+
+        if bankrupter is None:
+            for pnum in self.player_turn.proplist:
+                prop = self.prop_dict[pnum]
+                prop.owner = bankrupter
+                prop.morgaged = False
+                # Once auctions are added in, auction each property instead
+        
+
+        else: 
+            for pnum in self.player_turn.proplist:
+                prop = self.prop_dict[pnum]
+                prop.owner = bankrupter
+                bankrupter.proplist.append(propnum)
+       
+            bankrupter.money += self.player_turn.money
+
+        self.active_players.remove(self.turn)
+        self.inactive_players.append(self.turn)
+
+        
+    def morgage_property(self, propnum: int):
+        
+        assert propnum in self.player_turn.proplist, "You don't own this Property"
+        
+        prop = self.prop_dict[propnum]
+        
+        assert not prop.morgaged, "This property is already morgaged"
+        
+        if isinstance(prop, Property):
+            assert prop.houses == 0, "You must sell all houses first"
+
+        prop.morgaged = True
+        self.player_turn.money += prop.morgage_price
+    
+    def unmorgage_property(self, propnum: int):
+        assert propnum in self.player_turn.proplist,("You don't own this Property")
+        
+        prop = self.prop_dict[propnum]
+        
+        assert prop.morgaged, "This property is not morgaged"
+        
+        assert self.player_turn.money >= (prop.morgage_price 
+            + prop.morgage_price // 10), "Not enough money"
+
+        prop.morgaged = False
+        self.player_turn.money -= prop.morgage_price 
+        self.player_turn.money -= prop.morgage_price // 10
+    
+    def build_house(self, propnum: int):
+        
+        assert propnum in self.player_turn.proplist, ("You don't own this Property")
+        
+        assert 1 <= propnum <= 22, "You can't build on non-color properties"
+        
+        prop = self.prop_dict[propnum]
+        
+        assert not prop.morgaged, "This property is already morgaged"
+        assert prop.houses <= 4, "There is already a hotel here"
+
+        if 1 <= propnum <= 2:
+            propnum2 = 1
+            propnum3 = 2
+        elif 3 <= propnum <= 20:
+            if propnum % 3 == 0:
+
+                propnum2 = propnum + 1
+                propnum3 = propnum + 2
+            elif propnum % 3 == 1:
+                propnum2 = propnum + 1
+                propnum3 = propnum - 1
+            elif propnum % 3 == 2:
+                propnum2 = propnum - 1
+                propnum3 = propnum - 2
+        elif 21 <= propnum <= 22:
+            propnum2 = 21
+            propnum3 = 22
+        
+        assert propnum2 in self.player_turn.proplist, (f"{self.prop_dict[propnum2].name} is not owned")
+        assert propnum3 in self.player_turn.proplist, (f"{self.prop_dict[propnum3].name} is not owned")
+        
+        prop2 = self.prop_dict[propnum2]
+        prop3 = self.prop_dict[propnum3]
+        
+        assert prop.houses - prop2.houses <= 0, f"Not enough houses on {prop2.name}"
+        assert prop.houses - prop3.houses <= 0, f"Not enough houses on {prop3.name}"
+
+        assert self.player_turn.money >= prop.house_price, "Not enough money"
+        
+        if prop.houses == 4:
+            assert self.hotels >= 1, "Not enough hotels"
+            self.houses += 4
+            self.hotels -= 1
+        else:
+            assert self.houses >= 1, "Not enough houses"
+            self.houses -= 1 
+        
+        
+        prop.build_house()
+        self.player_turn.money -= prop.house_price
+    
+    def sell_house(self, propnum):
+        assert propnum in self.player_turn.proplist, "You don't own this Property"
+        
+        assert 1 <= propnum <= 22, "You can't build on non-color properties"
+        prop = self.prop_dict[propnum]
+        
+        assert prop.houses >= 1, "There are no houses on this property"
+        
+        if prop.houses == 5:
+            assert self.houses >= 4, "Not enough houses left to sell your hotel"
+            self.hotels += 1
+            self.houses -= 4
+        if prop.houses <= 4:
+            self.houses += 1
+        
+        self.player_turn.money += prop.house_price // 2
+
+
+            
+        
+        
+            
+
+    def end_turn(self) -> None:
+        if not self.turn_taken:
+            raise TurnTakenError("Turn Hasn't Been Taken")
+        
+        if self.in_debt():
+            for pnum in self.player_turn.proplist:
+                prop = self.prop_dict[pnum]
+                if (not prop.morgaged or 
+                    (isinstance(prop, Property) and prop.houses != 0)):
+
+                    raise NegativeMoneyError(
+                    f"{self.player_turn.pnum} is in debt, morgage properties " +
+                    "and sell houses (or trade for money), until your balance" +
+                    " is positive or all of your properties are morgaged and" +
+                        " houses are sold")
+                
+            
+            self.bankruptcy()
+        
+        self.turn = self.turn % self.num_players + 1 
+        
+        while self.turn not in self.active_players:
+            self.turn = self.turn % self.num_players + 1
+        
+        self.player_turn = self.pdict[self.turn]
+
+        if len(self.active_players) == 1:
+            self.done = True
+
+        self.turn_taken = False
+    
+
+
+
+
+class NegativeMoneyError(Exception):
+    pass
+class TurnTakenError(Exception):
+    pass
+
 
         
 
