@@ -1,7 +1,7 @@
 """
 Monopoly Implementation
 """
-import typing
+from typing import List, Tuple, Optional, Set, Callable, Dict
 import random
 import copy
 
@@ -11,8 +11,49 @@ directory with pygame
 """
 imagetype = str
 
+# Tile Base Class
+class Tile():
+    def __init__(self, name: str, pos: Tuple[int, int], image: imagetype):
+        self.name = name
+        self.pos = pos
+        self.image = image
 
 
+
+# Properties 
+
+class Property(Tile):
+
+
+    def __init__(self, name: str, pos: Tuple[int, int], image: str, 
+        propnum: int, cost, r0: int, r1: int, r2: int, r3: int, r4: int, 
+        rh: int, hp: int):
+
+        super().__init__(name, pos, image)
+        self.propnum = propnum
+
+        self.price = cost
+        self.rents = {}
+        self.rents[0] = r0
+        self.rents[1] = r1
+        self.rents[2] = r2
+        self.rents[3] = r3
+        self.rents[4] = r4
+        self.rents[5] = rh
+        
+        self.house_price = hp
+
+        self.house = 0
+        self.owner: Optional("Player") = None
+        self.morgage_price = cost // 2
+        self.morgaged = False
+    
+    def rent(self) -> int:
+        return self.rents[self.house]
+    def build_house(self) -> None:
+        self.house += 1
+    def remove_house(self) -> None:
+        self.house -= 1
 
 # Brown Properties
 mediterranean_ave = Property("Mediterranean Avenue", (1, 1), 
@@ -85,10 +126,54 @@ boardwalk = Property("Boardwalk", (8, 2), "boardwalk.png",
 
 # Utilities
 
+class Utility(Tile):
+    def __init__(self, name: str, pos: Tuple[int, int], image: str,
+        propnum: int):
+        super().__init__(name, pos, image)
+        self.price = 150
+        self.propnum = propnum
+        
+        self.owner: Optional("Player") = None
+        self.both = False
+        self.morgage_price = 75
+        self.morgaged = False
+
+    def rent(self, dieroll: int) -> int:
+        
+        if self.both:
+            return dieroll * 10
+        
+        else:
+            return dieroll * 4
+
 ELECTRIC_COMPANY = Utility("Electric Company", (1,1), "electric_company.png", 
                             23)
 WATER_WORKS = Utility("Water Works", (2,7), "water_works.png", 
                             24)
+
+
+# Railroads 
+
+class Railroad(Tile):
+    def __init__(self, name: str, pos: Tuple[int, int], image: imagetype,
+        propnum: int):
+        super().__init__(name, pos, image)
+        self.price = 200
+        self.propnum = propnum
+        self.owner: Optional("Player") = None
+
+        self.num_owned = 1
+        self.morgage_price = 100
+        self.morgaged = False
+
+        self.rents = {1: 25,
+            2: 50, 
+            3: 100,
+            4: 200}
+        
+    def rent(self) -> int:
+        return self.rents[self.num_owned]
+
 READING_RAILROAD = Railroad("Reading Railroad", (0, 4), "railroad.png",
     25)
 PENNSYLVANIA_RAILROAD = Railroad("Pennsylvania Railroad", (1, 4), "railroad.png",
@@ -98,23 +183,74 @@ BO_RAILROAD = Railroad("B&O Railroad", (2, 4), "railroad.png",
 SHORTLINE_RAILROAD = Railroad("Shortline Railroad", (3, 4), "railroad.png",
     28)
 
+# Card Tiles
+
+class Community_Chest_Tile(Tile):
+    def __init__(self, pos: Tuple[int, int]):
+        super().__init__("Community Chest", pos, "community.png" )
+class Chance_Tile(Tile):
+    def __init__(self, pos: Tuple[int, int]):
+        super().__init__("Chance", pos, "chance.png" )
+
+COMMUNITY_CHEST_TILE1 = Community_Chest_Tile((0,1))
+COMMUNITY_CHEST_TILE2 = Community_Chest_Tile((1,6))
+COMMUNITY_CHEST_TILE3 = Community_Chest_Tile((3,2))
+
+CHANCE_TILE1 = Chance_Tile((0,6))
+CHANCE_TILE2 = Chance_Tile((2,1))
+CHANCE_TILE3 = Chance_Tile((3,5))
+
+# Event Tiles
+
+class Event_Tile(Tile):
+    def __init__(self, name: str, pos: Tuple[int, int], image: imagetype, 
+        effect: Callable[["Monopoly"], None]):
+        super().__init__(name, pos, image)
+        self.effect = effect
+    def apply_tile(self, game: "Monopoly"):
+        self.effect(game)
+
+def go_tile(game: "Monopoly"):
+    pass
+def jail_tile(game:"Monopoly"):
+    pass
+def free_parking(game: "Monopoly"):
+    game.pdict[game.turn].money += center_money
+    game.center_money = 0
+def go_to_jail_tile(game: "Monopoly"):
+    game.send_jail()
+def income_tax(game: "Monopoly"):
+    game.pdict[game.turn].money -= 200
+    game.center_money += 200
+def luxury_tax(game: "Monopoly"):
+    game.pdict[game.turn].money -= 75
+    game.center_money += 200
+
+GO_TILE = Event_Tile("Go", (3,9), "go.png", go_tile)
+JAIL_TILE = Event_Tile("Jail", (0,9), "jail.png", jail_tile)
+FREE_PARKING = Event_Tile("Free Parking", (1,9), "free_parking.png", free_parking)
+GO_TO_JAIL = Event_Tile("Go to Jail", (2,9), "goto_jail.png", go_to_jail_tile)
+INCOME_TAX = Event_Tile("Income Tax", (0,3), "income_tax.png", income_tax)
+LUXURY_TAX = Event_Tile("Luxury_Tax", (3,7), "luxury_tax.png", luxury_tax)
+
+# Game Board + Property Dictionary
 
 STARTBOARD = [
     # Quadrant 0
-    [mediterranean_ave, COMMUNITY_CHEST_TILE, baltic_ave, INCOME_TAX, 
-        READING_RAILROAD, oriental_ave, vermont_ave, CHANCE_TILE, connecticut_ave, 
+    [mediterranean_ave, COMMUNITY_CHEST_TILE1, baltic_ave, INCOME_TAX, 
+        READING_RAILROAD, oriental_ave, CHANCE_TILE1, vermont_ave, connecticut_ave, 
         JAIL_TILE], 
     # Quadrant 1
     [st_charles_place, ELECTRIC_COMPANY, states_ave, virginia_ave, 
-        PENNSYLVANIA_RAILROAD, st_james_place, COMMUNITY_CHEST_TILE, 
+        PENNSYLVANIA_RAILROAD, st_james_place, COMMUNITY_CHEST_TILE2, 
         tennessee_ave, new_york_ave, FREE_PARKING],
     # Quadrant 2 
-    [kentucky_ave, CHANCE_TILE, indiana_ave, illinois_ave, 
+    [kentucky_ave, CHANCE_TILE2, indiana_ave, illinois_ave, 
         BO_RAILROAD, atlantic_ave, ventnor_ave, WATER_WORKS, 
         marvin_gardens, GO_TO_JAIL],
     # Quadrant 3
-    [pacific_ave, north_carolina_ave, COMMUNITY_CHEST_TILE, pennsylvania_ave, 
-        SHORTLINE_RAILROAD, CHANCE_TILE, park_place, LUXURY_TAX, 
+    [pacific_ave, north_carolina_ave, COMMUNITY_CHEST_TILE3, pennsylvania_ave, 
+        SHORTLINE_RAILROAD, CHANCE_TILE3, park_place, LUXURY_TAX, 
         boardwalk, GO_TILE]
         ]
 PROPDICT = {
@@ -148,97 +284,65 @@ PROPDICT = {
     28: SHORTLINE_RAILROAD,
 }
 
-class Tile():
-    def __init__(self, name: str, pos: Tuple[int, int], image: imagetype):
+
+
+
+
+# Chance + Commmunity Chest Decks
+
+
+class Event_Card():
+    def __init__(self, name: str, description: str, image: str, 
+        effect: Callable[["Monopoly"], None]):
+        
         self.name = name
-        self.pos = pos
+        self.description = description
         self.image = image
-
-
-class Property(Tile):
-
-
-    def __init__(self, name: str, pos: Tuple[int, int], image: str, 
-        propnum: int, cost, r0: int, r1: int, r2: int, r3: int, r4: int, 
-        rh: int, hp: int):
-
-        super().__init__(name, pos, image)
-        self.propnum = propnum
-
-        self.price = cost
-        self.rents = {}
-        self.rents[0] = r0
-        self.rents[1] = r1
-        self.rents[2] = r2
-        self.rents[3] = r3
-        self.rents[4] = r4
-        self.rents[5] = rh
-        
-        self.house_price = hp
-
-        self.house = 0
-        self.owner: Optional("Player") = None
-        self.morgage = cost // 2
+        self.effect = effect
     
-    def rent(self) -> int:
-        return self.rents[self.house]
-    def build_house(self) -> None:
-        self.house += 1
-    def remove_house(self) -> None:
-        self.house -= 1
+    def apply_card(self, game: "Monopoly"):
+        self.effect(game)
 
-class Utility(Tile):
-    def __init__(self, name: str, pos: Tuple[int, int], image: str,
-        propnum: int):
-        super().__init__(name, pos, image)
-        self.price = 150
-        self.propnum = propnum
+
+
+def advance_to_go(game: "Monopoly"):
+    game.passgo()
+    game.ploc[game.turn] = (3,9)
+def go_to_jail(game: "Monopoly"):
+    game.send_jail()
+def school_tax(game: "Monopoly"):
+    game.pdict[game.turn].money -= 150
+    game.center_money += 150
+
+CHANCE_DECK = {
+    0: Event_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
+        advance_to_go),
+    1: Event_Card("Go to Jail", "Go Directly to Jail", "jail.png",
+        go_to_jail),
+    2: Event_Card("School Tax", "Pay school tax of $150", "school_tax.png", 
+        school_tax),
+}
+
+COMMUNITY_CHEST_DECK = {
+    0: Event_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
+        advance_to_go),
+    1: Event_Card("Go to Jail", "Go Directly to Jail", "jail.png",
+        go_to_jail),
+    2: Event_Card("School Tax", "Pay school tax of $150", "school_tax.png",
+        school_tax),
+}
+
+
+
         
-        self.owner: Optional("Player") = None
-        self.both = False
-        self.morgage = 75
-
-    def rent(self, dieroll: int) -> int:
-        
-        if self.both:
-            return dieroll * 10
-        
-        else:
-            return dieroll * 4
-
-class Railroad(Tile):
-    def __init__(self, name: str, pos: Tuple[int, int], image: imagetype,
-        propnum: int):
-        super().__init__(name, pos, image)
-        self.price = 200
-        self.propnum = propnum
-        self.owner: Optional("Player") = None
-
-        self.num_owned = 1
-
-        self.rents = {1: 25,
-            2: 50, 
-            3: 100,
-            4: 200}
-        
-    def rent(self) -> int:
-        return self.rents[self.num_owned]
-
-
-
-def landing_event(self, landing_player: Player):
-        if self.owner is None:
-            buy = functions.prompt(f"Would You Like to Buy this Property (Y/N), the cost is {self.cost}")
-            if buy:
-                self.owner = landing_player.pnum
-                landing_player.proplist.append(self.propnum)
-        else:
-            landing_player.money -= rent 
 
 class Piece():
     def __init__(self, name: str, image: imagetype):
         self.name = name
         self.image = image
+
+
+# Class to represent individual players
 
 class Player():
     def __init__(self, pnum: int, money: int):
@@ -250,6 +354,7 @@ class Player():
 
 
 
+# Class to represent a game of Monopoly
 
 class Monopoly():
     pdict: Dict[int, Player]
@@ -257,7 +362,7 @@ class Monopoly():
 
     def __init__(self, num_players, startcash = 1500):
         
-        assert self.num_players >= 2 "Must have at least 2 players"
+        assert num_players >= 2, "Must have at least 2 players"
 
         self.d1 = None
         self.d2 = None
@@ -271,15 +376,31 @@ class Monopoly():
         self.board = copy.deepcopy(STARTBOARD)
         self.prop_dict = copy.deepcopy(PROPDICT)
         self.center_money = 0
-        self.turn_count = 0        
+        self.turn_count = 0    
+        self.active_players = []
+        self.inactive_players = []
+        self.done = False    
+        self.turn_taken = False
         
+
+        self.chance_deck = CHANCE_DECK
+        self.chance_order = [i for i in range(len(CHANCE_DECK.keys()))]
+        self.community_chest_deck = COMMUNITY_CHEST_DECK
+        self.community_chest_order = [
+            i for i in range(len(COMMUNITY_CHEST_DECK.keys()))]
+
+        
+        random.shuffle(self.chance_order) 
+        random.shuffle(self.community_chest_order) 
+
         for i in range(1, num_players + 1, 1):
             self.pdict[i] = Player(i, startcash)
             self.ploc[i] = (3, 9)
+            self.active_players.append(i)
+    
     def buy_property(self, player, propnum):
         prop = self.prop_dict[propnum]
-        player.money -= prop.cost
-        
+        player.money -= prop.price
 
         if 23 <= propnum <= 24:
             for i in [23, 24]:
@@ -296,13 +417,29 @@ class Monopoly():
         prop.owner = player
         player.proplist.append(propnum)
 
-    def property_landing(self, property):
+    def property_landing(self, prop):
+        if prop.owner is None:
+            
+            buy = True
+            
+            if buy:
+                self.buy_property(self.pdict[self.turn], prop.propnum)
+        
+        else:
+            landing_player.money -= prop.rent 
 
     def community_chest_landing(self):
+        cnum = self.community_chest_order.pop(0)
+        self.community_chest_order.append(cnum)
+        self.community_chest_deck[cnum].apply_card(self)
     
     def chance_landing(self):
+        cnum = self.chance_order.pop(0)
+        self.chance_order.append(cnum)
+        self.chance_deck[cnum].apply_card(self)
     
     def event_tile_landing(self, tile):
+        tile.apply_tile(self)
         
     def roll_dice(self):
         
@@ -314,20 +451,19 @@ class Monopoly():
         move = self.d1 + self.d2
         
         quadrant, dist = self.ploc[self.turn]
+ 
         
-        if quadrant == 3 and dist == 9:
-            new_quad == move // 10
-            new_dist = move % 10
-        else:
-            tot_move = dist + move
+        tot_move = dist + move
         
-            quadmove = tot_move // 9
+        quadmove = tot_move // 10
             
-            new_dist = tot_move % 10
-            new_quad = (quadrant + quadmove) % 4
+        new_dist = (tot_move) % 10
+        new_quad = (quadrant + quadmove) % 4
         
-            if quadrant + quadmove >= 4 or (new_quad == 3 and new_dist == 9):
-                self.passgo()
+        if ((quadrant + quadmove >= 4) or (new_quad == 3 
+            and new_dist == 9)) and not (quadrant == 3 and dist == 9):
+            
+            self.passgo()
         
         self.ploc[self.turn] = (new_quad, new_dist)
 
@@ -349,6 +485,7 @@ class Monopoly():
         player = self.pdict[self.turn]
         player.jail += 1
         self.ploc[self.turn] = (1,9)
+        self.turn_taken = True
 
     def exit_jail(self):
         player = self.pdict[self.turn]
@@ -360,6 +497,9 @@ class Monopoly():
             self.center_money += 50
 
     def take_turn(self) -> None:
+        
+        if self.turn_taken:
+            return
         
         player = self.pdict[self.turn]
         
@@ -380,12 +520,11 @@ class Monopoly():
                 if self.turn_count == 3:
                     self.send_jail()
                     self.turn_count = 0
-                    self.turn = (self.turn % self.num_players) + 1
                     return        
 
         
         if 0 <= player.jail <= 1:
-            self.turn = (self.turn % self.num_players) + 1
+            self.turn_taken = True
             return
         
         if player.jail == 3:
@@ -397,26 +536,12 @@ class Monopoly():
         self.apply_move()
 
         if self.turn_count == 0:
-            self.turn = (self.turn % self.num_players) + 1
+            self.turn_taken = True
 
         
 
     
         
-
-
-
-
-
-
-
-
-class Chance():
-    
-
-
-class Community_Chest():
-
 
 
 
