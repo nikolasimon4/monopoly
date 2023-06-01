@@ -75,7 +75,7 @@ baltic_ave = Property("Baltic Avenue", (0, 2), "images/DARK_PURPLE.png",
 # Light Blue Properties
 oriental_ave = Property("Oriental Avenue", (0, 5), "images/LIGHT_BLUE.png",
                         3, 100, 6, 30, 90, 270, 400, 550, 50)
-vermont_ave = Property("Vermont Avenue", (0, 6), "images/LIGHT_BLUE.png",
+vermont_ave = Property("Vermont Avenue", (0, 7), "images/LIGHT_BLUE.png",
                     4, 100, 6, 30, 90, 270, 400, 550, 50)
 connecticut_ave = Property("Connecticut Avenue", (0, 8), 
                         "images/LIGHT_BLUE.png",
@@ -158,9 +158,9 @@ class Utility(Tile):
         else:
             return dieroll * 4
 
-ELECTRIC_COMPANY = Utility("Electric Company", (1,1), "Better_Electric.png", 
+ELECTRIC_COMPANY = Utility("Electric Company", (1,1), "images/Better_Electric.png", 
                             23)
-WATER_WORKS = Utility("Water Works", (2,7), "WATERWORKS.png", 
+WATER_WORKS = Utility("Water Works", (2,7), "images/WATERWORKS.png", 
                             24)
 
 
@@ -189,23 +189,23 @@ class Railroad(Tile):
         else:
             return self.rents[self.num_owned]
 
-READING_RAILROAD = Railroad("Reading Railroad", (0, 4), "RAILROAD.png",
+READING_RAILROAD = Railroad("Reading Railroad", (0, 4), "images/RAILROAD.png",
     25)
-PENNSYLVANIA_RAILROAD = Railroad("Pennsylvania Railroad", (1, 4), "RAILROAD.png",
+PENNSYLVANIA_RAILROAD = Railroad("Pennsylvania Railroad", (1, 4), "images/RAILROAD.png",
     26)
-BO_RAILROAD = Railroad("B&O Railroad", (2, 4), "RAILROAD.png",
+BO_RAILROAD = Railroad("B&O Railroad", (2, 4), "images/RAILROAD.png",
     27)
-SHORTLINE_RAILROAD = Railroad("Shortline Railroad", (3, 4), "RAILROAD.png",
+SHORTLINE_RAILROAD = Railroad("Shortline Railroad", (3, 4), "images/RAILROAD.png",
     28)
 
 # Card Tiles
 
 class Community_Chest_Tile(Tile):
     def __init__(self, pos: Tuple[int, int]):
-        super().__init__("Community Chest", pos, "community.png" )
+        super().__init__("Community Chest", pos, "images/COMMUNITY_CHEST.png" )
 class Chance_Tile(Tile):
     def __init__(self, pos: Tuple[int, int]):
-        super().__init__("Chance", pos, "chance.png" )
+        super().__init__("Chance", pos, "images/CHANCE.png" )
 
 COMMUNITY_CHEST_TILE1 = Community_Chest_Tile((0,1))
 COMMUNITY_CHEST_TILE2 = Community_Chest_Tile((1,6))
@@ -245,8 +245,8 @@ GO_TILE = Event_Tile("Go", (3,9), "go.png", go_tile)
 JAIL_TILE = Event_Tile("Jail", (0,9), "jail.png", jail_tile)
 FREE_PARKING = Event_Tile("Free Parking", (1,9), "free_parking.png", free_parking)
 GO_TO_JAIL = Event_Tile("Go to Jail", (2,9), "goto_jail.png", go_to_jail_tile)
-INCOME_TAX = Event_Tile("Income Tax", (0,3), "income_tax.png", income_tax)
-LUXURY_TAX = Event_Tile("Luxury_Tax", (3,7), "luxury_tax.png", luxury_tax)
+INCOME_TAX = Event_Tile("Income Tax", (0,3), "images/INCOME_TAX.png", income_tax)
+LUXURY_TAX = Event_Tile("Luxury Tax", (3,7), "images/LUXURY_TAX.png", luxury_tax)
 
 # Game Board + Property Dictionary
 
