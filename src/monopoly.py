@@ -66,72 +66,72 @@ class Property(Tile):
         self.houses -= 1
 
 # Brown Properties
-mediterranean_ave = Property("Mediterranean Avenue", (1, 1), 
-                            "mediterranean_ave.png",
+mediterranean_ave = Property("Mediterranean Avenue", (0, 0), 
+                            "images/DARK_PURPLE.png",
                             1, 60, 2, 10, 30, 90, 160, 250, 50)
-baltic_ave = Property("Baltic Avenue", (1, 2), "baltic_ave.png",
+baltic_ave = Property("Baltic Avenue", (0, 2), "images/DARK_PURPLE.png",
                     2, 60, 4, 20, 60, 180, 320, 450, 50)
 
 # Light Blue Properties
-oriental_ave = Property("Oriental Avenue", (2, 1), "oriental_ave.png",
+oriental_ave = Property("Oriental Avenue", (0, 5), "images/LIGHT_BLUE.png",
                         3, 100, 6, 30, 90, 270, 400, 550, 50)
-vermont_ave = Property("Vermont Avenue", (2, 2), "vermont_ave.png",
+vermont_ave = Property("Vermont Avenue", (0, 6), "images/LIGHT_BLUE.png",
                     4, 100, 6, 30, 90, 270, 400, 550, 50)
-connecticut_ave = Property("Connecticut Avenue", (2, 3), 
-                        "connecticut_ave.png",
+connecticut_ave = Property("Connecticut Avenue", (0, 8), 
+                        "images/LIGHT_BLUE.png",
                         5, 120, 8, 40, 100, 300, 450, 600, 50)
 
 # Pink Properties
-st_charles_place = Property("St. Charles Place", (3, 1), 
-                            "st_charles_place.png",
+st_charles_place = Property("St. Charles Place", (1, 0), 
+                            "images/LIGHT_PURPLE.png",
                             6, 140, 10, 50, 150, 450, 625, 750, 100)
-states_ave = Property("States Avenue", (3, 2), "states_ave.png",
+states_ave = Property("States Avenue", (1, 2), "images/LIGHT_PURPLE.png",
                     7, 140, 10, 50, 150, 450, 625, 750, 100)
-virginia_ave = Property("Virginia Avenue", (3, 3), "virginia_ave.png",
+virginia_ave = Property("Virginia Avenue", (1, 3), "images/LIGHT_PURPLE.png",
                         8, 160, 12, 60, 180, 500, 700, 900, 100)
 
 # Orange Properties
-st_james_place = Property("St. James Place", (4, 1), 
-                        "st_james_place.png",
+st_james_place = Property("St. James Place", (1, 5), 
+                        "images/ORANGE.png",
                         9, 180, 14, 70, 200, 550, 750, 950, 100)
-tennessee_ave = Property("Tennessee Avenue", (4, 2), 
-                        "tennessee_ave.png",
+tennessee_ave = Property("Tennessee Avenue", (1, 7), 
+                        "images/ORANGE.png",
                         10, 180, 14, 70, 200, 550, 750, 950, 100)
-new_york_ave = Property("New York Avenue", (4, 3), 
-                        "new_york_ave.png",
+new_york_ave = Property("New York Avenue", (1, 8), 
+                        "images/ORANGE.png",
                         11, 200, 16, 80, 220, 600, 800, 1000, 100)
 
 # Red Properties
-kentucky_ave = Property("Kentucky Avenue", (5, 1), "kentucky_ave.png",
+kentucky_ave = Property("Kentucky Avenue", (2, 0), "images/RED.png",
                         12, 220, 18, 90, 250, 700, 875, 1050, 150)
-indiana_ave = Property("Indiana Avenue", (5, 2), "indiana_ave.png",
+indiana_ave = Property("Indiana Avenue", (2, 2), "images/RED.png",
                     13, 220, 18, 90, 250, 700, 875, 1050, 150)
-illinois_ave = Property("Illinois Avenue", (5, 3), "illinois_ave.png",
+illinois_ave = Property("Illinois Avenue", (2, 3), "images/RED.png",
                         14, 240, 20, 100, 300, 750, 925, 1100, 150)
 
 # Yellow Properties
-atlantic_ave = Property("Atlantic Avenue", (6, 1), "atlantic_ave.png",
+atlantic_ave = Property("Atlantic Avenue", (2, 5), "images/YELLOW.png",
                         15, 260, 22, 110, 330, 800, 975, 1150, 150)
-ventnor_ave = Property("Ventnor Avenue", (6, 2), "ventnor_ave.png",
+ventnor_ave = Property("Ventnor Avenue", (2, 6), "images/YELLOW.png",
                     16, 260, 22, 110, 330, 800, 975, 1150, 150)
-marvin_gardens = Property("Marvin Gardens", (6, 3), 
-                        "marvin_gardens.png",
+marvin_gardens = Property("Marvin Gardens", (2, 8), 
+                        "images/YELLOW.png",
                         17, 280, 24, 120, 360, 850, 1025, 1200, 150)
 
 # Green Properties
-pacific_ave = Property("Pacific Avenue", (7, 1), "pacific_ave.png",
+pacific_ave = Property("Pacific Avenue", (3, 0), "images/GREEN.png",
                     18, 300, 26, 130, 390, 900, 1100, 1275, 200)
-north_carolina_ave = Property("North Carolina Avenue", (7, 2), 
-                            "north_carolina_ave.png",
+north_carolina_ave = Property("North Carolina Avenue", (3, 1), 
+                            "images/GREEN.png",
                             19, 300, 26, 130, 390, 900, 1100, 1275, 200)
-pennsylvania_ave = Property("Pennsylvania Avenue", (7, 3), 
-                            "pennsylvania_ave.png",
+pennsylvania_ave = Property("Pennsylvania Avenue", (3, 3), 
+                            "images/GREEN.png",
                             20, 320, 28, 150, 450, 1000, 1200, 1400, 200)
 
 # Blue Properties
-park_place = Property("Park Place", (8, 1), "park_place.png",
+park_place = Property("Park Place", (3, 6), "images/DARK_BLUE.png",
                     21, 350, 35, 175, 500, 1100, 1300, 1500, 200)
-boardwalk = Property("Boardwalk", (8, 2), "boardwalk.png",
+boardwalk = Property("Boardwalk", (3, 8), "images/DARK_BLUE.png",
                     22, 400, 50, 200, 600, 1400, 1700, 2000, 200)
 
 # Utilities
@@ -158,9 +158,9 @@ class Utility(Tile):
         else:
             return dieroll * 4
 
-ELECTRIC_COMPANY = Utility("Electric Company", (1,1), "electric_company.png", 
+ELECTRIC_COMPANY = Utility("Electric Company", (1,1), "Better_Electric.png", 
                             23)
-WATER_WORKS = Utility("Water Works", (2,7), "water_works.png", 
+WATER_WORKS = Utility("Water Works", (2,7), "WATERWORKS.png", 
                             24)
 
 
@@ -189,13 +189,13 @@ class Railroad(Tile):
         else:
             return self.rents[self.num_owned]
 
-READING_RAILROAD = Railroad("Reading Railroad", (0, 4), "railroad.png",
+READING_RAILROAD = Railroad("Reading Railroad", (0, 4), "RAILROAD.png",
     25)
-PENNSYLVANIA_RAILROAD = Railroad("Pennsylvania Railroad", (1, 4), "railroad.png",
+PENNSYLVANIA_RAILROAD = Railroad("Pennsylvania Railroad", (1, 4), "RAILROAD.png",
     26)
-BO_RAILROAD = Railroad("B&O Railroad", (2, 4), "railroad.png",
+BO_RAILROAD = Railroad("B&O Railroad", (2, 4), "RAILROAD.png",
     27)
-SHORTLINE_RAILROAD = Railroad("Shortline Railroad", (3, 4), "railroad.png",
+SHORTLINE_RAILROAD = Railroad("Shortline Railroad", (3, 4), "RAILROAD.png",
     28)
 
 # Card Tiles
@@ -549,12 +549,16 @@ class Monopoly():
 
         prop.owner = self.player_turn
         self.player_turn.proplist.append(propnum)
-
-    def property_landing(self, prop):
+    def utility_landing(self, prop: Utility):
+        if prop.owner is not None:
+            prop.owner.money += prop.rent(self.d1 + self.d2)
+            self.player_turn.money -= prop.rent(self.d1 + self.d2)
+    
+    def property_landing(self, prop: Union[Railroad, Property]):
         if prop.owner is not None:
 
             prop.owner.money += prop.rent
-            landing_player.money -= prop.rent 
+            self.player_turn.money -= prop.rent 
 
     def community_chest_landing(self):
         cnum = self.community_chest_order.pop(0)
@@ -597,8 +601,10 @@ class Monopoly():
 
         landed = self.current_tile()
 
-        if isinstance(landed, Property) or isinstance(landed, Utility) or isinstance(landed, Railroad):
+        if isinstance(landed, Property) or isinstance(landed, Railroad):
             self.property_landing(landed)
+        elif isinstance(landed, Utility):
+            self.utility_landing(landed)
         elif isinstance(landed, Chance_Tile):
             self.chance_landing()
         elif isinstance(landed, Community_Chest_Tile):
