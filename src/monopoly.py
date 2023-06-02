@@ -241,10 +241,10 @@ def luxury_tax(game: "Monopoly"):
     game.player_turn.money -= 75
     game.center_money += 200
 
-GO_TILE = Event_Tile("Go", (3,9), "go.png", go_tile)
-JAIL_TILE = Event_Tile("Jail", (0,9), "jail.png", jail_tile)
-FREE_PARKING = Event_Tile("Free Parking", (1,9), "free_parking.png", free_parking)
-GO_TO_JAIL = Event_Tile("Go to Jail", (2,9), "goto_jail.png", go_to_jail_tile)
+GO_TILE = Event_Tile("Go", (3,9), "images/GO_TILE.png", go_tile)
+JAIL_TILE = Event_Tile("Jail", (0,9), "images/JAIL_TILE.png", jail_tile)
+FREE_PARKING = Event_Tile("Free Parking", (1,9), "images/FREE_PARKING.png", free_parking)
+GO_TO_JAIL = Event_Tile("Go to Jail", (2,9), "images/GO_TO_JAIL.png", go_to_jail_tile)
 INCOME_TAX = Event_Tile("Income Tax", (0,3), "images/INCOME_TAX.png", income_tax)
 LUXURY_TAX = Event_Tile("Luxury Tax", (3,7), "images/LUXURY_TAX.png", luxury_tax)
 
