@@ -17,6 +17,32 @@ A Type representing one of the game tiles
 GameTileType = Union["Property", "Railroad", "Utility", 
     "Community_Chest_Tile", "Chance_Tile", "Event_Tile"]
 
+# RGB Values for each property
+RGBDICT = {
+    1: (75, 0, 130),
+    2: (75, 0, 130),
+    3: (135, 206, 250),
+    4: (135, 206, 250),
+    5: (135, 206, 250),
+    6: (221, 160, 221),
+    7: (221, 160, 221),
+    8: (221, 160, 221),
+    9: (255, 140, 0),
+    10: (255, 140, 0),
+    11: (255, 140, 0),
+    12: (227, 38, 54),
+    13: (227, 38, 54),
+    14: (227, 38, 54),
+    15: (255, 215, 0),
+    16: (255, 215, 0),
+    17: (255, 215, 0),
+    18: (34, 139, 34),
+    19: (34, 139, 34),
+    20: (34, 139, 34),
+    21: (0, 0, 139),
+    22: (0, 0, 139)}
+
+
 # Tile Base Class
 class Tile():
     def __init__(self, name: str, pos: Tuple[int, int], image: imagetype):
@@ -53,7 +79,7 @@ class Property(Tile):
         self.owner: Optional("Player") = None
         self.morgage_price = cost // 2
         self.morgaged = False
-    
+        self.color = RGBDICT[self.propnum]
     def rent(self) -> int:
         
         if self.morgaged:
@@ -296,8 +322,17 @@ PROPDICT = {
     25: READING_RAILROAD,
     26: PENNSYLVANIA_RAILROAD,
     27: BO_RAILROAD,
-    28: SHORTLINE_RAILROAD,
-}
+    28: SHORTLINE_RAILROAD}
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -318,8 +353,6 @@ class Event_Card():
     def apply_card(self, game: "Monopoly"):
         self.effect(game)
 
-
-
 def advance_to_go(game: "Monopoly"):
     game.passgo()
     game.ploc[game.turn] = (3,9)
@@ -335,8 +368,7 @@ CHANCE_DECK = {
     1: Event_Card("Go to Jail", "Go Directly to Jail", "jail.png",
         go_to_jail),
     2: Event_Card("School Tax", "Pay school tax of $150", "school_tax.png", 
-        school_tax),
-}
+        school_tax)}
 
 COMMUNITY_CHEST_DECK = {
     0: Event_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
@@ -344,8 +376,7 @@ COMMUNITY_CHEST_DECK = {
     1: Event_Card("Go to Jail", "Go Directly to Jail", "jail.png",
         go_to_jail),
     2: Event_Card("School Tax", "Pay school tax of $150", "school_tax.png",
-        school_tax),
-}
+        school_tax)}
 
 
 
@@ -424,9 +455,6 @@ class Auction():
                 self.game.turn = self.turn % self.game.num_players + 1
             
             self.game.player_turn = self.game.pdict[self.game.turn]
-
-
-
 
 # Class to represent a game of Monopoly
 
@@ -874,10 +902,6 @@ class Monopoly():
             self.done = True
 
         self.turn_taken = False
-    
-
-
-
 
 class NegativeMoneyError(Exception):
     pass

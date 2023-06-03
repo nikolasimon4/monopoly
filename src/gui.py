@@ -10,34 +10,88 @@ DISPLAY_HEIGHT: int = DISPLAY.current_h
 DISPLAY_WIDTH: int = DISPLAY.current_w
 BORDER: int = 50
 
-
-print(DISPLAY_HEIGHT)
-print(DISPLAY_WIDTH)
 TILE_WIDTH = (DISPLAY_HEIGHT - 2 * BORDER) // 13 
 TILE_HEIGHT = TILE_WIDTH * 2
-BOARD_WINDOW: int = 13 * TILE_WIDTH
-BACKGROUND_COLOR = (191, 219, 174)
+BOARD_WINDOW = 13 * TILE_WIDTH
+
+BACKGROUND_COLOR: Tuple[int, int, int] = (191, 219, 174)
+
+
+HOUSECOLOR: Tuple[int, int, int] = (0,255,0)
+HOTELCOLOR: Tuple[int, int, int] = (255, 0, 0)
+TEXT_COLOR: Tuple[int, int, int] = (0, 0, 0)
+MORGAGE_WARNING_COLOR: Tuple[int, int, int] = (255, 0, 0)
+PROPERTY_CARD_COLOR: Tuple[int, int, int] = (255, 255, 255)
+LINE_BORDER_COLOR: Tuple[int, int, int] = (0, 0, 0)
+HIGHLIGHT_COLOR: Tuple[int, int, int] = (255, 255, 0)
+
 PROPCARD_Y_PADDING: int = 5
 PROPCARD_X_PADDING: int = 5
 PROPCARD_TEXT_SPACING: int = 4
 
+
+HOUSE_SPACING: int = 2
+
+
 FONTSIZE = TILE_WIDTH // 6 + 2
-TILETEXT = pygame.font.Font(size = FONTSIZE)
+TILETEXT: pygame.font = pygame.font.Font(size = FONTSIZE)
 
 
-def draw_property(prop: monopoly.Property) -> pygame.Surface:
+def empty_tile() -> pygame.Surface:
+    
     tile_image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT))
     tile_image.fill(BACKGROUND_COLOR)
     
+
     
-    image = pygame.image.load(prop.image)
+    return tile_image
+
+def tile_finish(tile_image: pygame.Surface):
     
-    image = pygame.transform.scale(image, (TILE_WIDTH, TILE_HEIGHT // 4))
+    pygame.draw.line(tile_image, LINE_BORDER_COLOR, (0,1),(TILE_WIDTH - 1, 1))
+    
+    pygame.draw.line(tile_image, LINE_BORDER_COLOR, (0, TILE_HEIGHT - 2),(TILE_WIDTH, TILE_HEIGHT - 2))
+
+    pygame.draw.rect(tile_image, color = LINE_BORDER_COLOR, rect = (0,0,TILE_WIDTH,TILE_HEIGHT), width = 1)
+
+def draw_house() -> pygame.Surface:
+    house_img = pygame.Surface((TILE_WIDTH // 5, TILE_HEIGHT // 10))
+    house_img.fill(HOUSECOLOR)
+    return house_img
+
+def draw_hotel() -> pygame.Surface:
+    hotel_img = pygame.Surface((2 * (TILE_HEIGHT // 5), TILE_HEIGHT // 5))
+    hotel_img.fill(HOTELCOLOR)
+    return hotel_img
+
+
+def draw_property_tile(prop: monopoly.Property) -> pygame.Surface:
+    tile_image = empty_tile()
+    
+    
+    image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT // 4))
+    image.fill(prop.color)
 
     tile_image.blit(image, (0,2))
+    
+    if 1 <= prop.houses <= 4:
+        houserow = pygame.Surface(((TILE_WIDTH // 5 + HOUSE_SPACING) * prop.houses, TILE_HEIGHT // 10))
+        
+        for house in range(prop.houses):
+            houserow.blit(draw_house(), (house * (TILE_WIDTH // 5 + HOUSE_SPACING) + HOUSE_SPACING, 0))
+    
+        tile_image.blit(houserow, houserow.get_rect(center = (TILE_WIDTH // 2, TILE_HEIGHT // 8)))
+    if prop.houses == 5:
+        hotel = draw_hotel()
+        tile_image.blit(hotel, hotel.get_rect(center = (TILE_WIDTH // 2, TILE_HEIGHT // 8)))
+
+
+    
+    
     newnames = prop.name.split()
     addname = ""
     row = 0
+    
     for name in newnames:
         
         if len(name) <= 3:
@@ -46,28 +100,24 @@ def draw_property(prop: monopoly.Property) -> pygame.Surface:
         
         name = addname + name
         addname = ""
-        text = TILETEXT.render(name, True, (0,0,0), BACKGROUND_COLOR)
+        text = TILETEXT.render(name, True, TEXT_COLOR, BACKGROUND_COLOR)
         
         text_rect = text.get_rect(center=(TILE_WIDTH // 2, TILE_HEIGHT // 4 + (row + 1) * FONTSIZE))
 
         tile_image.blit(text, text_rect)
         row += 1
     
-    cost = TILETEXT.render("$" + str(prop.price), True, (0,0,0), BACKGROUND_COLOR)
+    cost = TILETEXT.render("$" + str(prop.price), True, TEXT_COLOR, BACKGROUND_COLOR)
     cost_rect = cost.get_rect(center=(TILE_WIDTH // 2, 7 * TILE_HEIGHT // 8 ))
     tile_image.blit(cost, cost_rect)
-    
-    
-    pygame.draw.line(tile_image, (0,0,0), (0,1),(TILE_WIDTH - 1, 1))
 
-    pygame.draw.rect(tile_image, color = (0,0,0), rect = (0,0,TILE_WIDTH,TILE_HEIGHT), width = 1)
-
+    tile_finish(tile_image)
+    
     return tile_image
 
+def draw_special_property_tile(prop: Union[monopoly.Utility, monopoly.Railroad]) -> pygame.Surface:
+    tile_image = empty_tile()
 
-def draw_special_property(prop: Union[monopoly.Utility, monopoly.Railroad]) -> pygame.Surface:
-    tile_image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT))
-    tile_image.fill(BACKGROUND_COLOR)
     
     image = pygame.image.load(prop.image)
     
@@ -81,28 +131,23 @@ def draw_special_property(prop: Union[monopoly.Utility, monopoly.Railroad]) -> p
     newnames = prop.name.split()
     
     for row, name in enumerate(newnames):
-        text = TILETEXT.render(name, True, (0,0,0), BACKGROUND_COLOR)
+        text = TILETEXT.render(name, True, TEXT_COLOR, BACKGROUND_COLOR)
             
         text_rect = text.get_rect(center=(TILE_WIDTH // 2, (row + 1) * FONTSIZE))
 
         tile_image.blit(text, text_rect)
     
-    cost = TILETEXT.render("$" + str(prop.price), True, (0,0,0), BACKGROUND_COLOR)
+    cost = TILETEXT.render("$" + str(prop.price), True, TEXT_COLOR, BACKGROUND_COLOR)
     cost_rect = cost.get_rect(center=(TILE_WIDTH // 2, 7 * TILE_HEIGHT // 8 ))
     tile_image.blit(cost, cost_rect)
-    
-    pygame.draw.line(tile_image, (0,0,0), (0,1),(TILE_WIDTH - 1, 1))
 
-    pygame.draw.rect(tile_image, color = (0,0,0), rect = (0,0,TILE_WIDTH,TILE_HEIGHT), width = 1)
-    
+    tile_finish(tile_image)
     
     return tile_image
 
-def draw_chance(ch_tile: monopoly.Chance_Tile) -> pygame.Surface:
+def draw_chance_tile(ch_tile: monopoly.Chance_Tile) -> pygame.Surface:
     
-    tile_image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT))
-    
-    tile_image.fill(BACKGROUND_COLOR)
+    tile_image = empty_tile()
     
     image = pygame.image.load(ch_tile.image)
     
@@ -116,24 +161,18 @@ def draw_chance(ch_tile: monopoly.Chance_Tile) -> pygame.Surface:
     newnames = ch_tile.name.split()
     
     for row, name in enumerate(newnames):
-        text = TILETEXT.render(name, True, (0,0,0), BACKGROUND_COLOR)
+        text = TILETEXT.render(name, True, TEXT_COLOR, BACKGROUND_COLOR)
             
         text_rect = text.get_rect(center=(TILE_WIDTH // 2, (row + 1) * FONTSIZE))
 
         tile_image.blit(text, text_rect)
     
-    pygame.draw.rect(tile_image, color = (0,0,0), rect = (0,0,TILE_WIDTH,TILE_HEIGHT), width = 1)
-    
-    pygame.draw.line(tile_image, (0,0,0), (0,1),(TILE_WIDTH - 1, 1))
-
-
+    tile_finish(tile_image)
     return tile_image
 
-def draw_community(c_tile: monopoly.Community_Chest_Tile) -> pygame.Surface:
+def draw_community_tile(c_tile: monopoly.Community_Chest_Tile) -> pygame.Surface:
     
-    tile_image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT))
-    
-    tile_image.fill(BACKGROUND_COLOR)
+    tile_image = empty_tile()
     
     image = pygame.image.load(c_tile.image)
     
@@ -147,7 +186,7 @@ def draw_community(c_tile: monopoly.Community_Chest_Tile) -> pygame.Surface:
     newnames = c_tile.name.split()
     
     for row, name in enumerate(newnames):
-        text = TILETEXT.render(name, True, (0,0,0), BACKGROUND_COLOR)
+        text = TILETEXT.render(name, True, TEXT_COLOR, BACKGROUND_COLOR)
         
         if row == 0:
             text_rect = text.get_rect(center=(TILE_WIDTH // 2, 2 * (FONTSIZE)))
@@ -155,16 +194,14 @@ def draw_community(c_tile: monopoly.Community_Chest_Tile) -> pygame.Surface:
             text_rect = text.get_rect(center=(TILE_WIDTH // 2, (TILE_HEIGHT - 2 * FONTSIZE)))
 
         tile_image.blit(text, text_rect)
-    
-    pygame.draw.rect(tile_image, color = (0,0,0), rect = (0,0,TILE_WIDTH,TILE_HEIGHT), width = 1)
-    pygame.draw.line(tile_image, (0,0,0), (0,1),(TILE_WIDTH - 1, 1))
 
+    tile_finish(tile_image)
+    
     return tile_image
 
-def draw_event(e_tile: monopoly.Event_Tile):
-    tile_image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT))
+def draw_event_tile(e_tile: monopoly.Event_Tile):
+    tile_image = empty_tile()
     
-    tile_image.fill(BACKGROUND_COLOR)
     
     image = pygame.image.load(e_tile.image)
     
@@ -178,19 +215,18 @@ def draw_event(e_tile: monopoly.Event_Tile):
     newnames = e_tile.name.split()
     
     for row, name in enumerate(newnames):
-        text = TILETEXT.render(name, True, (0,0,0), BACKGROUND_COLOR)
+        text = TILETEXT.render(name, True, TEXT_COLOR, BACKGROUND_COLOR)
             
         text_rect = text.get_rect(center=(TILE_WIDTH // 2, (row + 1) * FONTSIZE))
 
 
         tile_image.blit(text, text_rect)
-    
-    pygame.draw.rect(tile_image, color = (0,0,0), rect = (0,0,TILE_WIDTH,TILE_HEIGHT), width = 1)
-    pygame.draw.line(tile_image, (0,0,0), (0,1),(TILE_WIDTH - 1, 1))
 
+    tile_finish(tile_image)
+    
     return tile_image
 
-def draw_special_event(se_tile: monopoly.Event_Tile) -> pygame.Surface:
+def draw_corner_tile(se_tile: monopoly.Event_Tile) -> pygame.Surface:
     tile_image = pygame.Surface((TILE_HEIGHT, TILE_HEIGHT))
     
     tile_image.fill(BACKGROUND_COLOR)
@@ -204,8 +240,12 @@ def draw_special_event(se_tile: monopoly.Event_Tile) -> pygame.Surface:
 
     tile_image.blit(image, image_rect)
     
-    pygame.draw.rect(tile_image, color = (0,0,0), rect = (0,0,TILE_HEIGHT,TILE_HEIGHT), width = 1)
+    pygame.draw.rect(tile_image, color = LINE_BORDER_COLOR, rect = (0,0,TILE_HEIGHT,TILE_HEIGHT), width = 1)
     
+    pygame.draw.line(tile_image, LINE_BORDER_COLOR, (0, TILE_HEIGHT - 2),(TILE_HEIGHT, TILE_HEIGHT - 2))
+    pygame.draw.line(tile_image, LINE_BORDER_COLOR, (TILE_HEIGHT - 2, 0),(TILE_HEIGHT - 2, TILE_HEIGHT))
+
+
     return tile_image
 
 def tile_loc(tile: monopoly.GameTileType) -> Tuple[int, int]:
@@ -241,31 +281,27 @@ def tile_loc(tile: monopoly.GameTileType) -> Tuple[int, int]:
     if quad == 3:
         return (BOARD_WINDOW + BORDER - TILE_HEIGHT, BORDER + 2 * TILE_WIDTH + dist * TILE_WIDTH)
 
-
-def draw_tile(surface: pygame.Surface, tile: monopoly.GameTileType) -> None:
+def draw_tile_onto_display(surface: pygame.Surface, tile: monopoly.GameTileType) -> None:
 
     loc = tile_loc(tile)
     
     quad, dist = tile.pos
 
     if dist == 9:
-        drawn = draw_special_event(tile)
-        surface.blit(drawn, loc)
-        return
-
-
+        drawn = draw_corner_tile(tile)
+        quad = (quad + 1) % 4 #Change for rots bcs rot deps on rot of pngs
 
     elif isinstance(tile, monopoly.Property):
-        drawn = draw_property(tile)
+        drawn = draw_property_tile(tile)
     elif isinstance(tile, monopoly.Railroad) or isinstance(tile, monopoly.Utility):
-        drawn = draw_special_property(tile)
+        drawn = draw_special_property_tile(tile)
     elif isinstance(tile, monopoly.Community_Chest_Tile):
-        drawn = draw_community(tile)
+        drawn = draw_community_tile(tile)
     elif isinstance(tile, monopoly.Chance_Tile):
-        drawn = draw_chance(tile)
+        drawn = draw_chance_tile(tile)
         
     elif isinstance(tile, monopoly.Event_Tile):
-        drawn = draw_event(tile)
+        drawn = draw_event_tile(tile)
 
     if quad == 1:
         drawn = pygame.transform.rotate(drawn, 270)
@@ -277,15 +313,17 @@ def draw_tile(surface: pygame.Surface, tile: monopoly.GameTileType) -> None:
         drawn = pygame.transform.rotate(drawn, 90)
     
     surface.blit(drawn, loc)
+
 def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
     
     small_text = pygame.font.Font(size = FONTSIZE - FONTSIZE // 6)
-
+    small_spacing = PROPCARD_TEXT_SPACING // 2
+    
     height = 2 * TILE_HEIGHT
     width = 2 * TILE_WIDTH
 
     prop_card = pygame.Surface((width, height))
-    prop_card.fill((255,255,255))
+    prop_card.fill(PROPERTY_CARD_COLOR)
 
     image = pygame.image.load(prop.image)
     
@@ -295,14 +333,14 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
 
     line_width = 2
 
-    pygame.draw.line(prop_card, (0,0,0), (PROPCARD_X_PADDING,height // 3 + PROPCARD_TEXT_SPACING), 
+    pygame.draw.line(prop_card, LINE_BORDER_COLOR, (PROPCARD_X_PADDING,height // 3 + PROPCARD_TEXT_SPACING), 
         (width - PROPCARD_X_PADDING, height // 3 + PROPCARD_TEXT_SPACING), 
         width = line_width)
     
     TILETEXT.set_bold(True)
     
 
-    proptext = (0,0,0)
+    proptext = TEXT_COLOR
     
     name_text = TILETEXT.render(prop.name, True, proptext)
     
@@ -316,7 +354,7 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
     TILETEXT.set_bold(False)
 
 
-    pygame.draw.line(prop_card, (0,0,0), (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+    pygame.draw.line(prop_card, LINE_BORDER_COLOR, (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
         + height // 3 + PROPCARD_TEXT_SPACING + line_width 
         + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING),
         (width - PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
@@ -325,32 +363,47 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
         width = line_width)
     
 
-    for row in range(1,9):
+    for row in range(1,8):
         
         if row == 1:
-            text = small_text.render('   If one "Utility" is owned', True, (0,0,0))
+            text = small_text.render('   If one "Utility" is owned', True, TEXT_COLOR)
         if row == 2:
-            text = small_text.render('rent is 4 times the amount shown', True, (0,0,0))
+            text = small_text.render('rent is 4 times the amount shown', True, TEXT_COLOR)
         if row == 3:
-            text = small_text.render('on dice', True, (0,0,0))
+            text = small_text.render('on dice', True, TEXT_COLOR)
         if row == 4:
-            text = small_text.render('   If both "Utilities" are owned', True, (0,0,0))
+            text = small_text.render('   If both "Utilities" are owned', True, TEXT_COLOR)
         if row == 5:
-            text = small_text.render('rent is 10 times the amount shown', True, (0,0,0))
+            text = small_text.render('rent is 10 times the amount shown', True, TEXT_COLOR)
         if row == 6:
-            text = small_text.render('on dice', True, (0,0,0))
+            text = small_text.render('on dice', True, TEXT_COLOR)
         if row == 7:
-            continue
-        if row == 8:
-            text = small_text.render(f'Morgage Value        ${prop.morgage_price}', True, (0,0,0))
+            text = small_text.render(f'Morgage Value        ${prop.morgage_price}', True, TEXT_COLOR)
         
         prop_card.blit(text, (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
             + height // 3 + PROPCARD_TEXT_SPACING + line_width 
             + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
-            (PROPCARD_TEXT_SPACING + FONTSIZE) * row))
+            (small_spacing + FONTSIZE) * row))
+    
+    if prop.morgaged:
+        morgage_text = small_text.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
+        
+        
+        prop_card.blit(morgage_text,   (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+            + height // 3 + PROPCARD_TEXT_SPACING + line_width 
+            + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
+            (small_spacing + FONTSIZE) * 8))
+
+        morgage_text = small_text.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
+
+        prop_card.blit(morgage_text,    (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+            + height // 3 + PROPCARD_TEXT_SPACING + line_width 
+            + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
+            (small_spacing + FONTSIZE) * 9))
+
+    pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
 
     return prop_card
-
 
 def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
     
@@ -360,7 +413,7 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
     width = 2 * TILE_WIDTH
 
     prop_card = pygame.Surface((width, height))
-    prop_card.fill((255,255,255))
+    prop_card.fill(PROPERTY_CARD_COLOR)
 
     image = pygame.image.load(prop.image)
     
@@ -370,14 +423,14 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
 
     line_width = 2
 
-    pygame.draw.line(prop_card, (0,0,0), (PROPCARD_X_PADDING,height // 3 + PROPCARD_TEXT_SPACING), 
+    pygame.draw.line(prop_card, LINE_BORDER_COLOR, (PROPCARD_X_PADDING,height // 3 + PROPCARD_TEXT_SPACING), 
         (width - PROPCARD_X_PADDING, height // 3 + PROPCARD_TEXT_SPACING), 
         width = line_width)
     
     TILETEXT.set_bold(True)
     
 
-    proptext = (0,0,0)
+    proptext = TEXT_COLOR
     
     name_text = TILETEXT.render(prop.name, True, proptext)
     
@@ -391,7 +444,7 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
     TILETEXT.set_bold(False)
 
 
-    pygame.draw.line(prop_card, (0,0,0), (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+    pygame.draw.line(prop_card, LINE_BORDER_COLOR, (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
         + height // 3 + PROPCARD_TEXT_SPACING + line_width 
         + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING),
         (width - PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
@@ -400,20 +453,18 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
         width = line_width)
     
 
-    for row in range(1,7):
+    for row in range(1,6):
         
         if row == 1:
-            text = small_text.render(f'Rent                                 ${prop.rents[row]}', True, (0,0,0))
+            text = small_text.render(f'Rent                                 ${prop.rents[row]}', True, TEXT_COLOR)
         if row == 2:
-            text = small_text.render(f"If 2 R.R.'s are owned    {prop.rents[row]}", True, (0,0,0))
+            text = small_text.render(f"If 2 R.R.'s are owned     {prop.rents[row]}", True, TEXT_COLOR)
         if row == 3:
-            text = small_text.render(f'If 3    "     "     "                {prop.rents[row]}', True, (0,0,0))
+            text = small_text.render(f'If 3    "     "     "                {prop.rents[row]}', True, TEXT_COLOR)
         if row == 4:
-            text = small_text.render(f'If 4    "     "     "                {prop.rents[row]}', True, (0,0,0))
+            text = small_text.render(f'If 4    "     "     "                {prop.rents[row]}', True, TEXT_COLOR)
         if row == 5:
-            continue
-        if row == 6:
-            text = small_text.render(f'Morgage Value                ${prop.morgage_price}', True, (0,0,0))
+            text = small_text.render(f'Morgage Value                ${prop.morgage_price}', True, TEXT_COLOR)
 
         
         prop_card.blit(text, (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
@@ -421,11 +472,26 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
             + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
             (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * row))
 
+        if prop.morgaged:
+            morgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
+            
+            
+            prop_card.blit(morgage_text,  (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+                + height // 3 + PROPCARD_TEXT_SPACING + line_width 
+                + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
+                (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 6))
+
+            morgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
+
+            prop_card.blit(morgage_text,   (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+                + height // 3 + PROPCARD_TEXT_SPACING + line_width 
+                + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
+                (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 7 - PROPCARD_TEXT_SPACING))
+
+        pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
+
+
     return prop_card
-
-
-
-
 
 def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
     
@@ -436,7 +502,7 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
     prop_card = pygame.Surface((width, height))
     
 
-    prop_card.fill((255,255,255))
+    prop_card.fill(PROPERTY_CARD_COLOR)
     
     
     image = pygame.image.load(prop.image)
@@ -450,7 +516,7 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
     if 1 <= prop.propnum <= 2 or 22 <= prop.propnum <= 23:
         proptext = (255,255,255)
     else:
-        proptext = (0,0,0)
+        proptext = TEXT_COLOR
     name_text = TILETEXT.render(prop.name, True, proptext)
     name_rect = name_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING + height // 10))
     prop_card.blit(name_text, name_rect)
@@ -466,11 +532,11 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
                 TILETEXT.set_strikethrough(True)
         
         if row == 0:
-            cost_text = TILETEXT.render("RENT $" + str(cost), True, (0,0,0))
+            cost_text = TILETEXT.render("RENT $" + str(cost), True, TEXT_COLOR)
         if 0 < row < 5:
-            cost_text = TILETEXT.render(f"With {row} House(s)    ${str(cost)}", True, (0,0,0))
+            cost_text = TILETEXT.render(f"With {row} House(s)    ${str(cost)}", True, TEXT_COLOR)
         if row == 5:
-            cost_text = TILETEXT.render(f"With HOTEL ${str(cost)}", True, (0,0,0))
+            cost_text = TILETEXT.render(f"With HOTEL ${str(cost)}", True, TEXT_COLOR)
 
         cost_rect = cost_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
             + height // 5 + PROPCARD_TEXT_SPACING + FONTSIZE
@@ -488,11 +554,11 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
     for i in range(6,9):
         
         if i == 6:
-            addin_text = TILETEXT.render(f"Morgage Value ${prop.morgage_price}", True, (0,0,0))
+            addin_text = TILETEXT.render(f"Morgage Value ${prop.morgage_price}", True, TEXT_COLOR)
         if i == 7:
-            addin_text = TILETEXT.render(f"Houses Cost ${prop.house_price} each", True, (0,0,0))
+            addin_text = TILETEXT.render(f"Houses Cost ${prop.house_price} each", True, TEXT_COLOR)
         if i == 8:
-            addin_text = TILETEXT.render(f"Hotels, ${prop.house_price} plus 4 houses", True, (0,0,0))
+            addin_text = TILETEXT.render(f"Hotels, ${prop.house_price} plus 4 houses", True, TEXT_COLOR)
 
         addin_rect = addin_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
             + height // 5 + PROPCARD_TEXT_SPACING + FONTSIZE
@@ -501,7 +567,7 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
         prop_card.blit(addin_text, addin_rect)
 
     if prop.morgaged:
-        morgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, (255, 0, 0))
+        morgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
         
         morgage_rect = morgage_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
             + height // 5 + PROPCARD_TEXT_SPACING + FONTSIZE
@@ -509,7 +575,7 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
         
         prop_card.blit(morgage_text, morgage_rect)
 
-        morgage_text = TILETEXT.render(f"TO UNMORGAGE", True, (255, 0, 0))
+        morgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
 
         
         morgage_rect = morgage_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
@@ -518,22 +584,27 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
         
         prop_card.blit(morgage_text, morgage_rect)
 
-    pygame.draw.rect(prop_card, color = (0,0,0), rect = (0,0,width,height), width = 2)
+    pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
 
     return prop_card
 
-
 def select_tile(surface: pygame.Surface, prop: Union[monopoly.Property, monopoly.Utility, monopoly.Railroad]):
-    prop_card = draw_railroad_card(prop)
+    if isinstance(prop, monopoly.Property):
+        prop_card = draw_property_card(prop)
+    if isinstance(prop, monopoly.Utility):
+        prop_card = draw_utility_card(prop)
+    if isinstance(prop, monopoly.Railroad):
+        prop_card = draw_railroad_card(prop)
     surface.blit(prop_card, (2 * BORDER + BOARD_WINDOW, BORDER))
 
     x, y = tile_loc(prop)
     quad, dist = prop.pos
     
     if quad == 0 or quad == 2:
-        pygame.draw.rect(surface, color = (255, 255, 0), rect = (x, y, TILE_WIDTH, TILE_HEIGHT), width = 1)
+        pygame.draw.rect(surface, color = HIGHLIGHT_COLOR, rect = (x, y, TILE_WIDTH, TILE_HEIGHT), width = 1)
     if quad == 1 or quad == 3:
-        pygame.draw.rect(surface, color = (255, 255, 0), rect = (x, y, TILE_HEIGHT, TILE_WIDTH), width = 1)
+        pygame.draw.rect(surface, color = HIGHLIGHT_COLOR, rect = (x, y, TILE_HEIGHT, TILE_WIDTH), width = 1)
+
 def de_select_tile(surface: pygame.Surface, prop: Union[monopoly.Property, monopoly.Utility, monopoly.Railroad]):
     
     x, y = tile_loc(prop)
@@ -544,9 +615,9 @@ def de_select_tile(surface: pygame.Surface, prop: Union[monopoly.Property, monop
     surface.blit(cover, (2 * BORDER + BOARD_WINDOW, BORDER))
     
     if quad == 0 or quad == 2:
-        pygame.draw.rect(surface, color = (0,0, 0), rect = (x, y, TILE_WIDTH, TILE_HEIGHT), width = 1)
+        pygame.draw.rect(surface, color = LINE_BORDER_COLOR, rect = (x, y, TILE_WIDTH, TILE_HEIGHT), width = 1)
     if quad == 1 or quad == 3:
-        pygame.draw.rect(surface, color = (0,0, 0), rect = (x, y, TILE_HEIGHT, TILE_WIDTH), width = 1)
+        pygame.draw.rect(surface, color = LINE_BORDER_COLOR, rect = (x, y, TILE_HEIGHT, TILE_WIDTH), width = 1)
 
 
 
@@ -578,8 +649,8 @@ def draw_board(monopoly: monopoly.Monopoly):
     surface = pygame.display.get_surface()
     for row in monopoly.board:
         for tile in row:
-            draw_tile(surface, tile)
+            draw_tile_onto_display(surface, tile)
     
-    select_tile(surface, monopoly.prop_dict[25])
+    select_tile(surface, monopoly.prop_dict[24])
     pygame.display.update()
 
