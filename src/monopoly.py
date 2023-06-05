@@ -849,15 +849,76 @@ class Monopoly():
         self.player_turn.money -= prop.morgage_price 
         self.player_turn.money -= prop.morgage_price // 10
     
+    def can_build(self, prop: GameTileType):
+        
+        if not isinstance(prop, Property):
+            return False
+        if self.isauction:
+            return False
+        if prop not in self.player_turn.proplist:
+            return False
+        if not prop.monop:
+            return False
+        if prop.morgaged:
+            return False
+        if prop.houses == 5:
+            return False
+        
+        propnum = prop.propnum
+        
+        if 1 <= propnum <= 2:
+            propnum2 = 1
+            propnum3 = 2
+        elif 3 <= propnum <= 20:
+            if propnum % 3 == 0:
+
+                propnum2 = propnum + 1
+                propnum3 = propnum + 2
+            elif propnum % 3 == 1:
+                propnum2 = propnum + 1
+                propnum3 = propnum - 1
+            elif propnum % 3 == 2:
+                propnum2 = propnum - 1
+                propnum3 = propnum - 2
+        elif 21 <= propnum <= 22:
+            propnum2 = 21
+            propnum3 = 22
+        
+
+        prop2 = self.prop_dict[propnum2]
+        prop3 = self.prop_dict[propnum3]
+
+
+        assert isinstance(prop2, Property)
+        assert isinstance(prop3, Property)
+        
+        if prop.houses - prop2.houses > 0 or prop2.morgaged:
+            return False
+        if prop.houses - prop3.houses > 0 or prop3.morgaged:
+            return False
+        
+        if self.player_turn.money <= prop.house_price:
+            return False
+        
+        if prop.houses == 4 and self.hotels < 1:
+            return False
+        elif self.houses < 1:
+            return False
+        
+        return True
+
+
+
     def build_house(self, prop: Property):
         
         assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
 
         assert prop in self.player_turn.proplist, ("You don't own this Property")
+        assert isinstance(prop, Property), "You can't build on non-color Properties"
+        assert prop.monop, "You do not have a monopoly on this property"
         propnum = prop.propnum
-        assert 1 <= propnum <= 22, "You can't build on non-color properties"
         
-        assert not prop.morgaged, "This property is already morgaged"
+        assert not prop.morgaged, "This property is morgaged, unmorgage it to build"
         assert prop.houses <= 4, "There is already a hotel here"
 
         if 1 <= propnum <= 2:
@@ -882,15 +943,14 @@ class Monopoly():
         prop2 = self.prop_dict[propnum2]
         prop3 = self.prop_dict[propnum3]
 
-        assert prop2 in self.player_turn.proplist, (f"{prop2.name} is not owned")
-        assert prop3 in self.player_turn.proplist, (f"{prop3.name} is not owned")
-        
+
         assert isinstance(prop2, Property)
         assert isinstance(prop3, Property)
         
         assert prop.houses - prop2.houses <= 0, f"Not enough houses on {prop2.name}"
         assert prop.houses - prop3.houses <= 0, f"Not enough houses on {prop3.name}"
-
+        assert not prop2.morgaged, f"{prop2.name} is morgaged, unmorgage it to build on this property"
+        assert not prop3.morgaged, f"{prop3.name} is morgaged, unmorgage it to build on this property"
         assert self.player_turn.money >= prop.house_price, "Not enough money"
         
         if prop.houses == 4:
@@ -905,6 +965,20 @@ class Monopoly():
         prop.build_house()
         self.player_turn.money -= prop.house_price
     
+    def can_sell(self, prop: GameTileType):
+        
+        if not isinstance(prop, Property):
+            return False
+            
+
+        if prop not in self.player_turn.proplist:
+            return False
+        if prop.houses == 0:
+            return False
+        if prop.houses == 5:
+            if self.houses < 4:
+                return False
+
     def sell_house(self, prop: Property):
         
         assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
