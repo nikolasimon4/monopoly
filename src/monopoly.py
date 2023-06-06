@@ -406,7 +406,7 @@ class Player():
 # Class to represent an auction
 
 class Auction():
-    def __init__(self, prop: Property, game: "Monopoly"):
+    def __init__(self, prop: Union[Property, Utility, Railroad], game: "Monopoly"):
         self.saveturn = copy.deepcopy(game.turn)
         self.active_players = copy.deepcopy(game.active_players)
         self.inactive_players = copy.deepcopy(game.inactive_players)
@@ -539,23 +539,39 @@ class Monopoly():
         
         self.player_turn = self.pdict[1]
 
-    def make_auction(self, prop: Property):
+    def make_auction(self, prop: Union[Property, Utility, Railroad]) -> None:
         self.auction = Auction(prop, self)
     
-    def bid(self, bid: int):
+    def bid(self, bid: int) -> None:
         assert self.isauction, "There is no auction currently happening"
         assert self.auction is not None
         self.auction.bid(bid)
-    def withdraw(self):
+    def withdraw(self) -> None:
         assert self.isauction, "There is no auction currently happening"
+        assert self.auction is not None, "Cannot withdraw from a nonexistant auction"
         self.auction.quit_auction()
-    def start_auction(self):
+    
+    def can_start_auction(self, prop: GameTileType) -> bool:
+        cur_tile = self.current_tile()
+        if not (isinstance(cur_tile, Property) 
+            or isinstance(cur_tile, Railroad) 
+            or isinstance(cur_tile, Utility)):
+            return False
+        if not cur_tile is prop:
+            return False
+        if cur_tile.owner is not None:
+            return False
+        
+        return True
+
+    def start_auction(self) -> None:
         cur_tile = self.current_tile()
         assert (isinstance(cur_tile, Property) 
             or isinstance(cur_tile, Railroad) 
             or isinstance(cur_tile, Utility)), "Not a valid tile to auction"
-
-        self.make_auction(self.current_tile())
+        assert cur_tile.owner is None, "Can't auction an owned property"
+        
+        self.make_auction(cur_tile)
 
 
     def can_buy(self, tile: GameTileType) -> bool:
@@ -576,7 +592,7 @@ class Monopoly():
        
         return self.board[quad][dist]
 
-    def update_monopoly(self, player: Player):
+    def update_monopoly(self, player: Player) -> None:
         count = {}
         
         for prop in player.proplist:
@@ -600,7 +616,7 @@ class Monopoly():
                 else:
                     for prop in colorlist:
                         prop.monop = False
-    def update_railroad(self, player: Player):
+    def update_railroad(self, player: Player) -> None:
         count = []
         for prop in player.proplist:
             if isinstance(prop, Railroad):
@@ -608,7 +624,7 @@ class Monopoly():
         for railroad in count:
             railroad.num_owned = len(count)
 
-    def update_utility(self, player: Player):
+    def update_utility(self, player: Player) -> None:
         count = 0
         for prop in player.proplist:
             if isinstance(prop, Utility):
@@ -619,7 +635,7 @@ class Monopoly():
         else:
             self.prop_dict[23].both = False # type: ignore
             self.prop_dict[24].both = False # type: ignore
-    def buy_property(self, prop: Union[Property, Utility, Railroad]):
+    def buy_property(self, prop: Union[Property, Utility, Railroad]) -> None:
         
         assert self.can_buy(prop), "You cannot buy this property"
         
@@ -639,46 +655,37 @@ class Monopoly():
             self.update_railroad(self.player_turn)
         elif isinstance(prop, Property):
             self.update_monopoly(self.player_turn)
-            
-
-
-    def buy_current(self) -> None:
-        cur_tile = self.current_tile()
-
-        assert isinstance(cur_tile, Property) or isinstance(cur_tile, Utility) or isinstance(cur_tile, Railroad)
         
-        self.buy_property(cur_tile)
-        
-    def utility_landing(self, prop: Utility):
+    def utility_landing(self, prop: Utility) -> None:
         if prop.owner is not None:
             prop.owner.money += prop.rent(self.d1 + self.d2)
             self.player_turn.money -= prop.rent(self.d1 + self.d2)
     
-    def property_landing(self, prop: Union[Railroad, Property]):
+    def property_landing(self, prop: Union[Railroad, Property]) -> None:
         if prop.owner is not None:
 
             prop.owner.money += prop.rent()
             self.player_turn.money -= prop.rent() 
 
-    def community_chest_landing(self):
+    def community_chest_landing(self) -> None:
         cnum = self.community_chest_order.pop(0)
         self.community_chest_order.append(cnum)
         self.community_chest_deck[cnum].apply_card(self)
     
-    def chance_landing(self):
+    def chance_landing(self) -> None:
         cnum = self.chance_order.pop(0)
         self.chance_order.append(cnum)
         self.chance_deck[cnum].apply_card(self)
     
-    def event_tile_landing(self, tile):
+    def event_tile_landing(self, tile) -> None:
         tile.apply_tile(self)
         
-    def roll_dice(self):
+    def roll_dice(self) -> None:
         
         self.d1 = random.randint(1,6)
         self.d2 = random.randint(1,6)
     
-    def apply_move(self):
+    def apply_move(self) -> None:
         
         move = self.d1 + self.d2
         
@@ -712,16 +719,16 @@ class Monopoly():
         else:
             self.event_tile_landing(landed)
     
-    def passgo(self):
+    def passgo(self) -> None:
         self.player_turn.money += 200
     
-    def send_jail(self):
+    def send_jail(self) -> None:
         self.turn_count = 0
         self.player_turn.jail += 1
         self.ploc[self.turn] = (1,9)
         self.turn_taken = True
 
-    def exit_jail(self):
+    def exit_jail(self) -> None:
         if self.player_turn.get_out:
             self.player_turn.get_out = False
             return
@@ -822,8 +829,11 @@ class Monopoly():
         self.active_players.remove(self.turn)
         self.inactive_players.append(self.turn)
 
-        
-    def morgage_property(self, prop: Property):
+    def can_morgage(self, prop: GameTileType) -> bool:
+        if not (isinstance(prop, Railroad) or isinstance(prop, Property) or isinstance(prop, Utility)):
+            return False
+        return not prop.morgaged and prop.owner is self.player_turn
+    def morgage_property(self, prop: Property) -> None:
         
         assert prop in self.player_turn.proplist, "You don't own this Property"
         
@@ -836,8 +846,11 @@ class Monopoly():
 
         prop.morgaged = True
         self.player_turn.money += prop.morgage_price
-    
-    def unmorgage_property(self, prop: Property):
+    def can_unmorgage(self, prop: GameTileType) -> bool:
+        if not (isinstance(prop, Railroad) or isinstance(prop, Property) or isinstance(prop, Utility)):
+            return False
+        return prop.morgaged and prop.owner is self.player_turn 
+    def unmorgage_property(self, prop: Property) -> None:
         assert prop in self.player_turn.proplist,("You don't own this Property")
         
         assert prop.morgaged, "This property is not morgaged"
@@ -849,7 +862,7 @@ class Monopoly():
         self.player_turn.money -= prop.morgage_price 
         self.player_turn.money -= prop.morgage_price // 10
     
-    def can_build(self, prop: GameTileType):
+    def can_build(self, prop: GameTileType) -> bool:
         
         if not isinstance(prop, Property):
             return False
@@ -978,6 +991,8 @@ class Monopoly():
         if prop.houses == 5:
             if self.houses < 4:
                 return False
+        
+        return True
 
     def sell_house(self, prop: Property):
         
@@ -996,6 +1011,7 @@ class Monopoly():
         if prop.houses <= 4:
             self.houses += 1
         
+        prop.remove_house()
         self.player_turn.money += prop.house_price // 2
 
 

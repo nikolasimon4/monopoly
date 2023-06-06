@@ -1,8 +1,13 @@
 import pygame
 import monopoly
 import sys, os
-from typing import Union, Tuple
+from typing import Union, Tuple, Callable, List
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+
+
+
+BUYABLE_TILE = Union[monopoly.Property, monopoly.Utility, monopoly.Railroad]
+RGBTYPE = Tuple[int, int, int]
 
 pygame.init()
 DISPLAY = pygame.display.Info()
@@ -14,28 +19,40 @@ TILE_WIDTH = (DISPLAY_HEIGHT - 2 * BORDER) // 13
 TILE_HEIGHT = TILE_WIDTH * 2
 BOARD_WINDOW = 13 * TILE_WIDTH
 
-BACKGROUND_COLOR: Tuple[int, int, int] = (191, 219, 174)
-
-
-HOUSECOLOR: Tuple[int, int, int] = (0,255,0)
-HOTELCOLOR: Tuple[int, int, int] = (255, 0, 0)
-TEXT_COLOR: Tuple[int, int, int] = (0, 0, 0)
-MORGAGE_WARNING_COLOR: Tuple[int, int, int] = (255, 0, 0)
-PROPERTY_CARD_COLOR: Tuple[int, int, int] = (255, 255, 255)
-LINE_BORDER_COLOR: Tuple[int, int, int] = (0, 0, 0)
-HIGHLIGHT_COLOR: Tuple[int, int, int] = (255, 255, 0)
+BACKGROUND_COLOR: RGBTYPE = (191, 219, 174)
+HOUSECOLOR: RGBTYPE = (0,255,0)
+HOTELCOLOR: RGBTYPE = (255, 0, 0)
+TEXT_COLOR: RGBTYPE = (0, 0, 0)
+BUTTON_TEXT_COLOR: RGBTYPE = (0, 0, 0)
+MORGAGE_WARNING_COLOR: RGBTYPE = (255, 0, 0)
+PROPERTY_CARD_COLOR: RGBTYPE = (255, 255, 255)
+LINE_BORDER_COLOR: RGBTYPE = (0, 0, 0)
+HIGHLIGHT_COLOR: RGBTYPE = (255, 255, 0)
+ACTIVE_BUTTON_BACKGROUND: RGBTYPE =  (170, 255, 190)
+INACTIVE_BUTTON_BACKGROUND: RGBTYPE =  (120, 120, 120)
 
 PROPCARD_Y_PADDING: int = 5
 PROPCARD_X_PADDING: int = 5
 PROPCARD_TEXT_SPACING: int = 4
-
+PROPCARD_XPOS = 2 * BORDER + BOARD_WINDOW
+PROPCARD_YPOS = 2 * BORDER
+PROPCARD_POS = (PROPCARD_XPOS, PROPCARD_YPOS)
+PROPCARD_HEIGHT = 2 * TILE_HEIGHT
+PROPCARD_WIDTH = 2 * TILE_WIDTH
 
 HOUSE_SPACING: int = 2
 
-
+BUTTON_HEIGHT = TILE_WIDTH // 2
+BUTTON_FONTSIZE = TILE_WIDTH // 3
+BUTTON_FONT = pygame.font.Font(None, size = BUTTON_FONTSIZE)
+BUTTON_PADDING = 5
+BUTTON_WIDTH = PROPCARD_WIDTH - 2 * BUTTON_PADDING
+SMALL_BUTTON_WIDTH = (BUTTON_WIDTH - BUTTON_PADDING) // 2
+SMALLBUTTON_FONT = pygame.font.Font(None, size = round(BUTTON_FONTSIZE * .8)) 
 FONTSIZE = TILE_WIDTH // 6 + 2
-TILETEXT: pygame.font = pygame.font.Font(size = FONTSIZE)
-
+TILETEXT = pygame.font.Font(None, size = FONTSIZE)
+LABELFONTSIZE = TILE_WIDTH // 2
+LABELFONT = pygame.font.Font(None, size = LABELFONTSIZE)
 
 def empty_tile() -> pygame.Surface:
     
@@ -63,7 +80,6 @@ def draw_hotel() -> pygame.Surface:
     hotel_img = pygame.Surface((2 * (TILE_HEIGHT // 5), TILE_HEIGHT // 5))
     hotel_img.fill(HOTELCOLOR)
     return hotel_img
-
 
 def draw_property_tile(prop: monopoly.Property) -> pygame.Surface:
     tile_image = empty_tile()
@@ -280,6 +296,10 @@ def tile_loc(tile: monopoly.GameTileType) -> Tuple[int, int]:
 
     if quad == 3:
         return (BOARD_WINDOW + BORDER - TILE_HEIGHT, BORDER + 2 * TILE_WIDTH + dist * TILE_WIDTH)
+    
+    else:
+        raise ValueError("Something is wrong")
+        return
 
 def draw_tile_onto_display(surface: pygame.Surface, tile: monopoly.GameTileType) -> None:
 
@@ -288,6 +308,7 @@ def draw_tile_onto_display(surface: pygame.Surface, tile: monopoly.GameTileType)
     quad, dist = tile.pos
 
     if dist == 9:
+        assert isinstance(tile, monopoly.Event_Tile)
         drawn = draw_corner_tile(tile)
         quad = (quad + 1) % 4 #Change for rots bcs rot deps on rot of pngs
 
@@ -316,11 +337,11 @@ def draw_tile_onto_display(surface: pygame.Surface, tile: monopoly.GameTileType)
 
 def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
     
-    small_text = pygame.font.Font(size = FONTSIZE - FONTSIZE // 6)
+    small_text = pygame.font.Font(None, size = FONTSIZE - FONTSIZE // 6)
     small_spacing = PROPCARD_TEXT_SPACING // 2
     
-    height = 2 * TILE_HEIGHT
-    width = 2 * TILE_WIDTH
+    height = PROPCARD_HEIGHT
+    width = PROPCARD_WIDTH
 
     prop_card = pygame.Surface((width, height))
     prop_card.fill(PROPERTY_CARD_COLOR)
@@ -407,10 +428,10 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
 
 def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
     
-    small_text = pygame.font.Font(size = FONTSIZE)
+    small_text = pygame.font.Font(None, size = FONTSIZE)
 
-    height = 2 * TILE_HEIGHT
-    width = 2 * TILE_WIDTH
+    height = PROPCARD_HEIGHT
+    width = PROPCARD_WIDTH
 
     prop_card = pygame.Surface((width, height))
     prop_card.fill(PROPERTY_CARD_COLOR)
@@ -496,8 +517,8 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
 def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
     
 
-    height = 2 * TILE_HEIGHT
-    width = 2 * TILE_WIDTH
+    height = PROPCARD_HEIGHT
+    width = PROPCARD_WIDTH
 
     prop_card = pygame.Surface((width, height))
     
@@ -513,11 +534,11 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
     
     TILETEXT.set_bold(True)
     
-    if 1 <= prop.propnum <= 2 or 22 <= prop.propnum <= 23:
+    if 1 <= prop.propnum <= 2 or 21 <= prop.propnum <= 22:
         proptext = (255,255,255)
     else:
         proptext = TEXT_COLOR
-    name_text = TILETEXT.render(prop.name, True, proptext)
+    name_text = BUTTON_FONT.render(prop.name, True, proptext)
     name_rect = name_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING + height // 10))
     prop_card.blit(name_text, name_rect)
     
@@ -595,7 +616,7 @@ def select_tile(surface: pygame.Surface, prop: Union[monopoly.Property, monopoly
         prop_card = draw_utility_card(prop)
     if isinstance(prop, monopoly.Railroad):
         prop_card = draw_railroad_card(prop)
-    surface.blit(prop_card, (2 * BORDER + BOARD_WINDOW, BORDER))
+    surface.blit(prop_card, PROPCARD_POS)
 
     x, y = tile_loc(prop)
     quad, dist = prop.pos
@@ -610,47 +631,180 @@ def de_select_tile(surface: pygame.Surface, prop: Union[monopoly.Property, monop
     x, y = tile_loc(prop)
     quad, dist = prop.pos
 
-    cover = pygame.Surface((2 * TILE_WIDTH, 2 * TILE_HEIGHT))
+    cover = pygame.Surface((PROPCARD_WIDTH, PROPCARD_HEIGHT))
     cover.fill((BACKGROUND_COLOR))
-    surface.blit(cover, (2 * BORDER + BOARD_WINDOW, BORDER))
+    surface.blit(cover, PROPCARD_POS)
     
     if quad == 0 or quad == 2:
         pygame.draw.rect(surface, color = LINE_BORDER_COLOR, rect = (x, y, TILE_WIDTH, TILE_HEIGHT), width = 1)
     if quad == 1 or quad == 3:
         pygame.draw.rect(surface, color = LINE_BORDER_COLOR, rect = (x, y, TILE_HEIGHT, TILE_WIDTH), width = 1)
 
-
-
-def play_monopoly(game: monopoly.Monopoly):
-
-    start_display()
-    draw_board(monopoly)
-    
-    done = False
-    clock = pygame.time.Clock()
-
-    selected_tile = None
-
-
-    while not done:
-        pass
-
-
+def draw_button_on_display(surface: pygame.Surface, button: "Button", game: monopoly.Monopoly, prop: monopoly.GameTileType):
+    if button.active(game, prop):
+        surface.blit(button.active_image, button.pos)
+    else:
+        surface.blit(button.inactive_image, button.pos)
 
 
 
 def start_display():
+    # Filling Background
     s = pygame.display.set_mode()
     s.fill(BACKGROUND_COLOR)
+
+    # Text to indicate position of selected card
+    selectedtext = LABELFONT.render("Selected Tile", True, TEXT_COLOR)
+    xpos, ypos = PROPCARD_POS
+    selected_rect = selectedtext.get_rect(
+        center = (xpos + PROPCARD_WIDTH // 2, ypos - BORDER // 2))
+    s.blit(selectedtext, selected_rect)
+
     pygame.display.update()
 
-
 def draw_board(monopoly: monopoly.Monopoly):
+    
     surface = pygame.display.get_surface()
+    
+    # Drawing all the tiles onfo the surface
     for row in monopoly.board:
         for tile in row:
             draw_tile_onto_display(surface, tile)
-    
-    select_tile(surface, monopoly.prop_dict[24])
+    selected = monopoly.prop_dict[21]
+    select_tile(surface, monopoly.prop_dict[21])
+    draw_button_on_display(surface, PLUS_ONE_HOUSE, monopoly, selected)
+    draw_button_on_display(surface, MINUS_ONE_HOUSE, monopoly, selected)
+    draw_button_on_display(surface, BUY_PROPERTY, monopoly, selected)
+    draw_button_on_display(surface, START_AUCTION, monopoly, selected)
+    if not selected.morgaged:
+        draw_button_on_display(surface, MORGAGE_PROPERTY, monopoly, selected)
+        
+    if selected.morgaged:
+        draw_button_on_display(surface, UNMORGAGE_PROPERTY, monopoly, selected)
+
     pygame.display.update()
+
+
+class Button():
+
+    def __init__(self, pos: Tuple[int, int], active_image: pygame.Surface, 
+        inactive_image: pygame.Surface,
+        effect: Callable[[monopoly.Monopoly, BUYABLE_TILE], List[BUYABLE_TILE]],
+        isactive: Callable[[monopoly.Monopoly, monopoly.GameTileType], bool]):
+        
+        self.pos = pos
+        self.active_image = active_image
+        self.inactive_image = inactive_image
+        self.effect = effect
+        self.isactive = isactive
+
+    
+    def in_button(self, loc: Tuple[int, int]) -> bool:
+        
+        width = self.active_image.get_width()
+        height = self.active_image.get_height()
+        
+        xpos, ypos = loc
+        x1, y1 = self.pos
+
+        return (x1 <= xpos <= x1 + width) and (y1 <= ypos <= y1 + height)
+    
+    def apply_effect(self, game: monopoly.Monopoly, prop: BUYABLE_TILE) -> List[BUYABLE_TILE]:
+        return self.effect(game, prop)
+    def active(self, game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+        return self.isactive(game, prop)
+
+def draw_button(width: int, height: int, text: str, background: RGBTYPE) -> pygame.Surface:
+    surface = pygame.Surface((width, height))
+    surface.fill(background)
+    
+    if width == SMALL_BUTTON_WIDTH:
+        txtrender = SMALLBUTTON_FONT.render(text, True, BUTTON_TEXT_COLOR)
+        
+    else:
+        txtrender = BUTTON_FONT.render(text, True, BUTTON_TEXT_COLOR)
+    
+    text_rect = txtrender.get_rect(center = (width // 2, height // 2))
+    surface.blit(txtrender, text_rect)
+    return surface
+
+# +1 House Button
+def plus_one_house_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+    game.build_house(prop)
+    return [prop]
+def plus_one_house_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+    return game.can_build(prop)
+PLUS_ONE_HOUSE = Button(
+    (PROPCARD_XPOS + BUTTON_PADDING, PROPCARD_YPOS + PROPCARD_HEIGHT + BUTTON_PADDING),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "+1 House", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "+1 House", INACTIVE_BUTTON_BACKGROUND),
+    plus_one_house_effect, plus_one_house_legal)
+
+# -1 House Button
+def minus_one_house_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+    game.sell_house(prop)
+    return [prop]
+def minus_one_house_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+    return game.can_sell(prop)
+MINUS_ONE_HOUSE = Button(
+    (PROPCARD_XPOS + (PROPCARD_WIDTH // 2 + BUTTON_PADDING), PROPCARD_YPOS + PROPCARD_HEIGHT + BUTTON_PADDING),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "-1 House", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "-1 House", INACTIVE_BUTTON_BACKGROUND),
+    minus_one_house_effect, minus_one_house_legal)
+
+# Buy Property Button
+def buy_property_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+    game.buy_property(prop)
+    return [prop]
+def buy_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+    return game.can_buy(prop)
+BUY_PROPERTY = Button(
+    (PROPCARD_XPOS + BUTTON_PADDING, 
+    PROPCARD_YPOS + PROPCARD_HEIGHT + BUTTON_PADDING + BUTTON_HEIGHT + BUTTON_PADDING),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Buy", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Buy", INACTIVE_BUTTON_BACKGROUND),
+    buy_property_effect, buy_property_legal)
+# Start Auction Button
+def start_auction_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+    game.start_auction()
+    return []
+def start_auction_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+    return game.can_start_auction(prop)
+START_AUCTION = Button(
+    (PROPCARD_XPOS + (PROPCARD_WIDTH // 2) + BUTTON_PADDING, 
+    PROPCARD_YPOS + PROPCARD_HEIGHT + BUTTON_PADDING + BUTTON_HEIGHT + BUTTON_PADDING),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Auction", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Auction", INACTIVE_BUTTON_BACKGROUND),
+    start_auction_effect, start_auction_legal)
+# Morgage Property Button
+def morgage_property_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+    game.morgage_property(prop)
+    return [prop]
+def morgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+    
+    return game.can_morgage(prop)
+MORGAGE_PROPERTY = Button(
+    (PROPCARD_XPOS + BUTTON_PADDING, 
+    PROPCARD_YPOS + PROPCARD_HEIGHT + 3 * BUTTON_PADDING + 2 * BUTTON_HEIGHT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", INACTIVE_BUTTON_BACKGROUND),
+    morgage_property_effect, morgage_property_legal)
+# Unmorgage Property Button
+def unmorgage_property_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+    game.unmorgage_property(prop)
+    return [prop]
+def unmorgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+    
+    return game.can_unmorgage(prop)
+UNMORGAGE_PROPERTY = Button(
+    (PROPCARD_XPOS + BUTTON_PADDING, 
+    PROPCARD_YPOS + PROPCARD_HEIGHT + 3 * BUTTON_PADDING + 2 * BUTTON_HEIGHT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", INACTIVE_BUTTON_BACKGROUND),
+    unmorgage_property_effect, unmorgage_property_legal)
+
+
+# Take Turn Button (Roll Dice + Move)
+
+# End Turn Button
 
