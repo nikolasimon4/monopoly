@@ -401,6 +401,8 @@ class Player():
         self.proplist: List[Union[Property, Utility, Railroad]] = []
         self.jail: int = 0
         self.get_out: bool = False
+    def __str__(self):
+        return f"Player {str(self.pnum)}"
 
 
 # Class to represent an auction
@@ -730,7 +732,7 @@ class Monopoly():
     def send_jail(self) -> None:
         self.turn_count = 0
         self.player_turn.jail += 1
-        self.ploc[self.turn] = (1,9)
+        self.ploc[self.turn] = (0,9)
         self.turn_taken = True
 
     def exit_jail(self) -> None:
