@@ -490,8 +490,8 @@ class Monopoly():
         
         assert num_players >= 2, "Must have at least 2 players"
 
-        self.d1: int = 0
-        self.d2: int = 0
+        self.d1: int = 1
+        self.d2: int = 1
 
         self.pdict = {}
         self.ploc = {}
@@ -636,8 +636,13 @@ class Monopoly():
             self.prop_dict[23].both = False # type: ignore
             self.prop_dict[24].both = False # type: ignore
     def buy_property(self, prop: Union[Property, Utility, Railroad]) -> None:
-        
-        assert self.can_buy(prop), "You cannot buy this property"
+        assert (isinstance(prop, Property) 
+            or isinstance(prop, Utility) 
+            or isinstance(prop, Railroad)), "This is not a buyable tile"
+            
+            
+        assert (prop.pos == self.ploc[self.turn]), "You cannot buy a property you do not occupy"
+        assert prop.owner is None, "You cannot buy a property someone already owns"
         
         propnum = prop.propnum
         
@@ -735,7 +740,20 @@ class Monopoly():
         else:
             self.player_turn.money -= 50 
             self.center_money += 50
-
+    def can_take_turn(self) -> None:
+        if self.isauction:
+            return False
+        if self.turn_taken:
+            return False
+        if self.done:
+            return False
+        cur_tile = self.current_tile()
+        if (isinstance(cur_tile, Property) 
+            or isinstance(cur_tile, Utility) 
+            or isinstance(cur_tile, Railroad)) and cur_tile.owner is None:
+            return False
+        return True
+    
     def take_turn(self) -> None:
         assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
         assert not self.turn_taken, "Turn has already been taken"        
@@ -789,6 +807,23 @@ class Monopoly():
     def in_debt(self) -> bool:
         return self.player_turn.money < 0 
     
+
+    def is_bankrupt(self) -> bool:
+        bankrupt = False
+        
+        if self.in_debt():
+            bankrupt = True
+            
+            for prop in self.player_turn.proplist:
+
+                bankrupt = bankrupt and prop.morgaged
+
+                if isinstance(prop, Property):
+                    bankrupt = bankrupt and (prop.houses == 0)
+                
+        return bankrupt
+
+
     def bankruptcy(self) -> None:
         
         
@@ -1015,7 +1050,27 @@ class Monopoly():
         self.player_turn.money += prop.house_price // 2
 
 
-            
+    
+
+    def can_end_turn(self) -> None:
+        if self.isauction:
+            return False
+        cur_tile = self.current_tile()
+        if ((isinstance(cur_tile, Property) 
+            or isinstance(cur_tile, Utility) 
+            or isinstance(cur_tile, Railroad)) 
+            and cur_tile.owner is None):
+            return False
+        if self.turn_count != 0:
+            return False
+        if not self.turn_taken:
+            return False
+        if self.in_debt() and not self.is_bankrupt():
+            return False
+        return True
+        
+
+
         
         
             
@@ -1041,22 +1096,7 @@ class Monopoly():
         assert self.turn_taken, "Your Turn Hasn't Been Taken"
         
         if self.in_debt():
-            bankrupt = True
-            
-            for prop in self.player_turn.proplist:
-
-                bankrupt = bankrupt and prop.morgaged
-
-                if isinstance(prop, Property):
-                    bankrupt = bankrupt and (prop.houses == 0)
-                
-                if not bankrupt:
-                    raise NegativeMoneyError(
-                    f"{self.player_turn.pnum} is in debt, morgage properties " +
-                    "and sell houses (or trade for money), until your balance" +
-                    " is positive or all of your properties are morgaged and" +
-                        " houses are sold")
-            
+            assert self.is_bankrupt(), "You must morgage all properties and sell all houses to declare bankruptcy"    
             self.bankruptcy()
         
         self.turn = self.turn % self.num_players + 1 
@@ -1071,8 +1111,6 @@ class Monopoly():
 
         self.turn_taken = False
 
-class NegativeMoneyError(Exception):
-    pass
 
     
         

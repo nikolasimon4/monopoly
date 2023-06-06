@@ -1,7 +1,7 @@
 import pygame
 import monopoly
 import sys, os
-from typing import Union, Tuple, Callable, List
+from typing import Union, Tuple, Callable, List, Set
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 
@@ -43,16 +43,30 @@ PROPCARD_WIDTH = 2 * TILE_WIDTH
 HOUSE_SPACING: int = 2
 
 BUTTON_HEIGHT = TILE_WIDTH // 2
-BUTTON_FONTSIZE = TILE_WIDTH // 3
+BUTTON_FONTSIZE = TILE_WIDTH // 3 - 1
 BUTTON_FONT = pygame.font.Font(None, size = BUTTON_FONTSIZE)
 BUTTON_PADDING = 5
 BUTTON_WIDTH = PROPCARD_WIDTH - 2 * BUTTON_PADDING
 SMALL_BUTTON_WIDTH = (BUTTON_WIDTH - BUTTON_PADDING) // 2
-SMALLBUTTON_FONT = pygame.font.Font(None, size = round(BUTTON_FONTSIZE * .8)) 
+SMALLBUTTON_FONT = pygame.font.Font(None, size = round(BUTTON_FONTSIZE * .7)) 
 FONTSIZE = TILE_WIDTH // 6 + 2
 TILETEXT = pygame.font.Font(None, size = FONTSIZE)
 LABELFONTSIZE = TILE_WIDTH // 2
 LABELFONT = pygame.font.Font(None, size = LABELFONTSIZE)
+
+
+DICE_IMAGES = {
+    1: "images/dice1.png",
+    2: "images/dice2.png",
+    3: "images/dice3.png",
+    4: "images/dice4.png",
+    5: "images/dice5.png",
+    6: "images/dice6.png"
+}
+
+
+
+
 
 def empty_tile() -> pygame.Surface:
     
@@ -532,17 +546,17 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
 
     prop_card.blit(image, (PROPCARD_X_PADDING,PROPCARD_Y_PADDING))
     
-    TILETEXT.set_bold(True)
+    SMALLBUTTON_FONT.set_bold(True)
     
     if 1 <= prop.propnum <= 2 or 21 <= prop.propnum <= 22:
         proptext = (255,255,255)
     else:
         proptext = TEXT_COLOR
-    name_text = BUTTON_FONT.render(prop.name, True, proptext)
+    name_text = SMALLBUTTON_FONT.render(prop.name, True, proptext)
     name_rect = name_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING + height // 10))
     prop_card.blit(name_text, name_rect)
     
-    TILETEXT.set_bold(False)
+    SMALLBUTTON_FONT.set_bold(False)
     
     
     for row, cost in prop.rents.items():
@@ -616,6 +630,7 @@ def select_tile(surface: pygame.Surface, prop: Union[monopoly.Property, monopoly
         prop_card = draw_utility_card(prop)
     if isinstance(prop, monopoly.Railroad):
         prop_card = draw_railroad_card(prop)
+    
     surface.blit(prop_card, PROPCARD_POS)
 
     x, y = tile_loc(prop)
@@ -646,6 +661,177 @@ def draw_button_on_display(surface: pygame.Surface, button: "Button", game: mono
     else:
         surface.blit(button.inactive_image, button.pos)
 
+def draw_buttons_onto_display(surface: pygame.Surface, buttons: Set["Button"], game: monopoly.Monopoly, prop: monopoly.GameTileType):
+    for button in buttons:
+        draw_button_on_display(surface, button, game, prop)
+
+
+def draw_dice(surface: pygame.Surface, game: monopoly.Monopoly):
+    d1img = pygame.image.load(DICE_IMAGES[game.d1])
+    d2img = pygame.image.load(DICE_IMAGES[game.d2])
+    
+    d1img = pygame.transform.scale(d1img, (SMALL_BUTTON_WIDTH, 2 * BUTTON_HEIGHT))
+    d2img = pygame.transform.scale(d2img, (SMALL_BUTTON_WIDTH, 2 * BUTTON_HEIGHT))
+
+    d1img_rect = d1img.get_rect(topleft = (PROPCARD_XPOS, DISPLAY_HEIGHT - BORDER - TILE_WIDTH + BUTTON_PADDING))
+    d2img_rect = d2img.get_rect(topleft = (PROPCARD_XPOS + BUTTON_PADDING + SMALL_BUTTON_WIDTH, DISPLAY_HEIGHT - BORDER - TILE_WIDTH + BUTTON_PADDING))
+
+    surface.blit(d1img, d1img_rect)
+    surface.blit(d2img, d2img_rect)
+
+def print_error_message(surface: pygame.Surface, emessage: str):
+    error_words = emessage.split()
+    
+    error_line = ""
+    
+    error_img = pygame.Surface((PROPCARD_WIDTH, PROPCARD_WIDTH))
+    error_img.fill(BACKGROUND_COLOR)
+    row = 0
+
+    for word in error_words:
+        error_line += " " + word
+        if len(error_line) >= 20:
+            errortxt = TILETEXT.render(error_line, True, MORGAGE_WARNING_COLOR)
+            errortxtrect = errortxt.get_rect(center = (PROPCARD_WIDTH // 2, (row + 1) * (FONTSIZE + PROPCARD_TEXT_SPACING)))
+            error_img.blit(errortxt, errortxtrect)
+            error_line = ""
+            row += 1
+    if len(error_line) > 0:
+        errortxt = TILETEXT.render(error_line, True, MORGAGE_WARNING_COLOR)
+        errortxtrect = errortxt.get_rect(center = (PROPCARD_WIDTH // 2, (row + 1) * (FONTSIZE + PROPCARD_TEXT_SPACING)))
+        error_img.blit(errortxt, errortxtrect)
+    
+    surface.blit(error_img, (PROPCARD_XPOS, BORDER + BOARD_WINDOW // 2 + BUTTON_PADDING))
+
+
+def locate_tile(game: monopoly.Monopoly, loc: Tuple[int, int], quadrant: int) -> monopoly.GameTileType:
+    x, y = loc
+
+    if quadrant == 0:
+        xboard = BORDER + BOARD_WINDOW - TILE_HEIGHT - x
+        tile = xboard // TILE_WIDTH
+        if tile == 10:
+            tile = 9
+        return game.board[0][tile]
+    
+    if quadrant == 1:
+        yboard = BORDER + BOARD_WINDOW - y - TILE_HEIGHT
+        
+        tile = yboard // TILE_WIDTH
+        if tile == 10:
+            tile = 9
+        return game.board[1][tile]
+    if quadrant == 2:
+        tile = (x - BORDER - TILE_HEIGHT) // TILE_WIDTH
+        if tile == 10:
+            tile = 9
+        return game.board[2][tile]    
+    if quadrant == 3:
+        tile = (y - BORDER - TILE_HEIGHT) // TILE_WIDTH
+        if tile == 10:
+            tile = 9
+        return game.board[3][tile]
+
+
+
+def play_monopoly(game: monopoly.Monopoly):
+    start_display()
+    draw_board(game)
+    surface = pygame.display.get_surface()
+
+    done = False
+    clock = pygame.time.Clock()
+    pygame.display.update()
+    
+    active_buttons = []
+
+    selected_tile = game.prop_dict[1]
+    
+    active_buttons = {PLUS_ONE_HOUSE, MINUS_ONE_HOUSE, MORGAGE_PROPERTY, BUY_PROPERTY, START_AUCTION,ROLL_DICE}
+
+
+    while not done:
+
+        if selected_tile.morgaged:
+            active_buttons.discard(MORGAGE_PROPERTY)
+            active_buttons.add(UNMORGAGE_PROPERTY)
+        if not selected_tile.morgaged:
+            active_buttons.add(MORGAGE_PROPERTY)
+            active_buttons.discard(UNMORGAGE_PROPERTY)
+        if game.turn_taken:
+            active_buttons.discard(ROLL_DICE)
+            active_buttons.add(END_TURN)
+        if not game.turn_taken:
+            active_buttons.add(ROLL_DICE)
+            active_buttons.discard(END_TURN)
+        
+        draw_buttons_onto_display(surface, active_buttons, game, selected_tile)
+
+        events = pygame.event.get()
+
+        for event in events:
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONUP:
+                
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                poss_tile = None
+
+                for button in active_buttons:
+                    if button.in_button((mouse_x, mouse_y)):
+                        try:
+                            affected_tiles = button.apply_effect(game, selected_tile)
+                            
+                            for tile in affected_tiles:
+                                draw_tile_onto_display(surface, tile)
+                            if button.effect is take_turn_effect:
+                                poss_tile = game.current_tile()
+
+                        except AssertionError as emessage:
+                            print_error_message(surface, str(emessage))
+
+                # Check if in quadrant 0 
+                if ((BORDER < mouse_x < BORDER + BOARD_WINDOW - TILE_HEIGHT) and (DISPLAY_HEIGHT - BORDER - TILE_HEIGHT < mouse_y < DISPLAY_HEIGHT - BORDER)):
+                    poss_tile = locate_tile(game, (mouse_x, mouse_y), 0)
+                    
+                
+                # Check if in quadrant 1
+                if ((BORDER < mouse_x < BORDER + TILE_HEIGHT) and (BORDER < mouse_y < BORDER + BOARD_WINDOW - TILE_HEIGHT)):
+                    poss_tile = locate_tile(game, (mouse_x, mouse_y), 1)
+                
+                # Check if in quadrant 2
+
+                if ((BORDER + TILE_HEIGHT < mouse_x < BORDER + BOARD_WINDOW) and (BORDER < mouse_y < BORDER + TILE_HEIGHT)):
+                    poss_tile = locate_tile(game, (mouse_x, mouse_y), 2)
+
+
+                
+                # Check if in quadrant 3
+                if ((BORDER + BOARD_WINDOW - TILE_HEIGHT < mouse_x < BORDER + BOARD_WINDOW) and (BORDER + TILE_HEIGHT < mouse_y < BORDER + BOARD_WINDOW)):
+                    poss_tile = locate_tile(game, (mouse_x, mouse_y), 3)
+
+                if poss_tile is None:
+                    pass
+                else:
+                    if isinstance(poss_tile, monopoly.Property) or isinstance(poss_tile, monopoly.Utility) or isinstance(poss_tile, monopoly.Railroad):
+                        de_select_tile(surface, selected_tile)
+                        selected_tile = poss_tile
+                        print_error_message(surface, "")
+
+
+
+        
+        select_tile(surface, selected_tile)
+        draw_dice(surface, game)
+        pygame.display.update()
+        clock.tick(12)
+                
+
+
+
+        
+
 
 
 def start_display():
@@ -660,8 +846,6 @@ def start_display():
         center = (xpos + PROPCARD_WIDTH // 2, ypos - BORDER // 2))
     s.blit(selectedtext, selected_rect)
 
-    pygame.display.update()
-
 def draw_board(monopoly: monopoly.Monopoly):
     
     surface = pygame.display.get_surface()
@@ -670,19 +854,6 @@ def draw_board(monopoly: monopoly.Monopoly):
     for row in monopoly.board:
         for tile in row:
             draw_tile_onto_display(surface, tile)
-    selected = monopoly.prop_dict[21]
-    select_tile(surface, monopoly.prop_dict[21])
-    draw_button_on_display(surface, PLUS_ONE_HOUSE, monopoly, selected)
-    draw_button_on_display(surface, MINUS_ONE_HOUSE, monopoly, selected)
-    draw_button_on_display(surface, BUY_PROPERTY, monopoly, selected)
-    draw_button_on_display(surface, START_AUCTION, monopoly, selected)
-    if not selected.morgaged:
-        draw_button_on_display(surface, MORGAGE_PROPERTY, monopoly, selected)
-        
-    if selected.morgaged:
-        draw_button_on_display(surface, UNMORGAGE_PROPERTY, monopoly, selected)
-
-    pygame.display.update()
 
 
 class Button():
@@ -713,7 +884,6 @@ class Button():
         return self.effect(game, prop)
     def active(self, game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
         return self.isactive(game, prop)
-
 def draw_button(width: int, height: int, text: str, background: RGBTYPE) -> pygame.Surface:
     surface = pygame.Surface((width, height))
     surface.fill(background)
@@ -764,6 +934,7 @@ BUY_PROPERTY = Button(
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Buy", ACTIVE_BUTTON_BACKGROUND),
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Buy", INACTIVE_BUTTON_BACKGROUND),
     buy_property_effect, buy_property_legal)
+
 # Start Auction Button
 def start_auction_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
     game.start_auction()
@@ -776,6 +947,7 @@ START_AUCTION = Button(
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Auction", ACTIVE_BUTTON_BACKGROUND),
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Auction", INACTIVE_BUTTON_BACKGROUND),
     start_auction_effect, start_auction_legal)
+
 # Morgage Property Button
 def morgage_property_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
     game.morgage_property(prop)
@@ -789,6 +961,7 @@ MORGAGE_PROPERTY = Button(
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", ACTIVE_BUTTON_BACKGROUND),
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", INACTIVE_BUTTON_BACKGROUND),
     morgage_property_effect, morgage_property_legal)
+
 # Unmorgage Property Button
 def unmorgage_property_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
     game.unmorgage_property(prop)
@@ -803,8 +976,32 @@ UNMORGAGE_PROPERTY = Button(
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", INACTIVE_BUTTON_BACKGROUND),
     unmorgage_property_effect, unmorgage_property_legal)
 
-
 # Take Turn Button (Roll Dice + Move)
+def take_turn_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE) -> List[monopoly.GameTileType]:
+    affected_tiles = [game.current_tile()]
+    
+    game.take_turn()
+
+    affected_tiles.append(game.current_tile())
+    return affected_tiles
+def take_turn_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    return game.can_take_turn()
+ROLL_DICE = Button(
+    (PROPCARD_XPOS, 
+    DISPLAY_HEIGHT - BORDER - TILE_HEIGHT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "ROLL", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "ROLL", INACTIVE_BUTTON_BACKGROUND),
+    take_turn_effect, take_turn_legal)
 
 # End Turn Button
-
+def end_turn_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE) -> List[monopoly.GameTileType]:
+    game.end_turn()
+    return []
+def end_turn_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    return game.can_end_turn()
+END_TURN = Button(
+    (PROPCARD_XPOS, 
+    DISPLAY_HEIGHT - BORDER - TILE_HEIGHT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", INACTIVE_BUTTON_BACKGROUND),
+    end_turn_effect, end_turn_legal)
