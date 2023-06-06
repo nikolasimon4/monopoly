@@ -55,6 +55,7 @@ LABELFONTSIZE = TILE_WIDTH // 2
 LABELFONT = pygame.font.Font(None, size = LABELFONTSIZE)
 
 
+
 DICE_IMAGES = {
     1: "images/dice1.png",
     2: "images/dice2.png",
@@ -64,7 +65,11 @@ DICE_IMAGES = {
     6: "images/dice6.png"
 }
 
+PLAYER_PIECES = {
+    1: "images/RACECAR.png",
+    2: "images/DOG.png"
 
+}
 
 
 
@@ -398,7 +403,7 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
         width = line_width)
     
 
-    for row in range(1,8):
+    for row in range(1,9):
         
         if row == 1:
             text = small_text.render('   If one "Utility" is owned', True, TEXT_COLOR)
@@ -413,7 +418,9 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
         if row == 6:
             text = small_text.render('on dice', True, TEXT_COLOR)
         if row == 7:
-            text = small_text.render(f'Morgage Value        ${prop.morgage_price}', True, TEXT_COLOR)
+            text = small_text.render(f'Morgage Value:       ${prop.morgage_price}', True, TEXT_COLOR)
+        if row == 8:
+            text = small_text.render(f'              Owner: {str(prop.owner)}', True, TEXT_COLOR)
         
         prop_card.blit(text, (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
             + height // 3 + PROPCARD_TEXT_SPACING + line_width 
@@ -423,18 +430,21 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
     if prop.morgaged:
         morgage_text = small_text.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
         
-        
-        prop_card.blit(morgage_text,   (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
-            + height // 3 + PROPCARD_TEXT_SPACING + line_width 
-            + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
-            (small_spacing + FONTSIZE) * 8))
-
-        morgage_text = small_text.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
-
-        prop_card.blit(morgage_text,    (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+        rect = morgage_text.get_rect(center = (PROPCARD_WIDTH // 2, PROPCARD_Y_PADDING 
             + height // 3 + PROPCARD_TEXT_SPACING + line_width 
             + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
             (small_spacing + FONTSIZE) * 9))
+        
+        prop_card.blit(morgage_text, rect)
+
+        morgage_text = small_text.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
+        
+        rect = morgage_text.get_rect(center = (PROPCARD_WIDTH // 2, PROPCARD_Y_PADDING 
+            + height // 3 + PROPCARD_TEXT_SPACING + line_width 
+            + PROPCARD_TEXT_SPACING + FONTSIZE + line_width + 
+            (small_spacing + FONTSIZE) * 10))
+        
+        prop_card.blit(morgage_text, rect)
 
     pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
 
@@ -488,7 +498,7 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
         width = line_width)
     
 
-    for row in range(1,6):
+    for row in range(1,7):
         
         if row == 1:
             text = small_text.render(f'Rent                                 ${prop.rents[row]}', True, TEXT_COLOR)
@@ -500,7 +510,8 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
             text = small_text.render(f'If 4    "     "     "                {prop.rents[row]}', True, TEXT_COLOR)
         if row == 5:
             text = small_text.render(f'Morgage Value                ${prop.morgage_price}', True, TEXT_COLOR)
-
+        if row == 6:
+            text = small_text.render(f'Owner: {str(prop.owner)}', True, TEXT_COLOR)
         
         prop_card.blit(text, (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
             + height // 3 + PROPCARD_TEXT_SPACING + line_width 
@@ -508,20 +519,21 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
             (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * row))
 
         if prop.morgaged:
+            
             morgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
             
             
             prop_card.blit(morgage_text,  (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
-                + height // 3 + PROPCARD_TEXT_SPACING + line_width 
-                + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
-                (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 6))
+                + height // 3 + PROPCARD_TEXT_SPACING 
+                + PROPCARD_TEXT_SPACING + FONTSIZE + line_width + 
+                (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 7))
 
             morgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
 
             prop_card.blit(morgage_text,   (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
-                + height // 3 + PROPCARD_TEXT_SPACING + line_width 
-                + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + line_width + 
-                (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 7 - PROPCARD_TEXT_SPACING))
+                + height // 3 
+                + FONTSIZE + line_width + 
+                (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 8 - PROPCARD_TEXT_SPACING))
 
         pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
 
@@ -586,7 +598,7 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
                 TILETEXT.set_strikethrough(False)
 
 
-    for i in range(6,9):
+    for i in range(6,10):
         
         if i == 6:
             addin_text = TILETEXT.render(f"Morgage Value ${prop.morgage_price}", True, TEXT_COLOR)
@@ -595,6 +607,9 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
         if i == 8:
             addin_text = TILETEXT.render(f"Hotels, ${prop.house_price} plus 4 houses", True, TEXT_COLOR)
 
+        if i == 9:
+            addin_text = TILETEXT.render(f"Owner: {str(prop.owner)}", True, TEXT_COLOR)
+        
         addin_rect = addin_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
             + height // 5 + PROPCARD_TEXT_SPACING + FONTSIZE
             + i * (PROPCARD_TEXT_SPACING + FONTSIZE)))
@@ -679,6 +694,68 @@ def draw_dice(surface: pygame.Surface, game: monopoly.Monopoly):
     surface.blit(d1img, d1img_rect)
     surface.blit(d2img, d2img_rect)
 
+def draw_pieces(surface: pygame.Surface, game: monopoly.Monopoly):
+
+    pcount = {}
+
+    for pnum in range(1, game.num_players + 1):
+        quad, dist = game.ploc[pnum]
+        if quad in pcount:
+            if dist in pcount[quad]:
+                pcount[quad][dist].append(pnum)
+            else:
+                pcount[quad][dist] = [pnum]
+        else:
+            pcount[quad] = {}
+            pcount[quad][dist] = [pnum]
+    
+    for quad, distdict in pcount.items():
+        for dist, plist in distdict.items():
+            draw_player_piece(surface, game, plist, (quad, dist))
+
+def draw_player_piece(surface: pygame.Surface, game: monopoly.Monopoly, plist: List[int], loc: Tuple[int, int]):
+
+
+    num_same_loc = len(plist)
+    pquad, pdist = loc
+    tilex, tiley = tile_loc(game.board[pquad][pdist])
+
+    row = 0
+    
+    for pnum in plist:
+
+        image_load = pygame.image.load(PLAYER_PIECES[pnum])
+        tile_image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT), pygame.SRCALPHA)
+        image_load = pygame.transform.scale(image_load, (TILE_WIDTH // num_same_loc, TILE_HEIGHT // num_same_loc))
+
+
+        tile_image.blit(image_load, (row * (TILE_WIDTH // num_same_loc), TILE_HEIGHT - (TILE_HEIGHT // num_same_loc)))
+
+        if pdist == 9:
+            pass
+        
+        if pquad == 0: 
+            pass
+        if pquad == 1:
+            tile_image = pygame.transform.rotate(tile_image, 90)
+            tile_image = pygame.transform.flip(tile_image, True, True)
+        if pquad == 2:
+            tile_image = pygame.transform.rotate(image_load, 180)
+        if pquad == 3:
+            tile_image = pygame.transform.rotate(tile_image, 270)
+            tile_image = pygame.transform.flip(tile_image, True, True)
+
+        surface.blit(tile_image, (tilex, tiley))
+        row += 1 
+
+    
+    
+    
+    
+    
+
+
+
 def print_error_message(surface: pygame.Surface, emessage: str):
     error_words = emessage.split()
     
@@ -732,8 +809,6 @@ def locate_tile(game: monopoly.Monopoly, loc: Tuple[int, int], quadrant: int) ->
             tile = 9
         return game.board[3][tile]
 
-
-
 def play_monopoly(game: monopoly.Monopoly):
     start_display()
     draw_board(game)
@@ -783,10 +858,13 @@ def play_monopoly(game: monopoly.Monopoly):
                         try:
                             affected_tiles = button.apply_effect(game, selected_tile)
                             
+                            if button.effect is take_turn_effect:
+
+                                poss_tile = game.current_tile()
+
                             for tile in affected_tiles:
                                 draw_tile_onto_display(surface, tile)
-                            if button.effect is take_turn_effect:
-                                poss_tile = game.current_tile()
+                            
 
                         except AssertionError as emessage:
                             print_error_message(surface, str(emessage))
@@ -824,15 +902,9 @@ def play_monopoly(game: monopoly.Monopoly):
         
         select_tile(surface, selected_tile)
         draw_dice(surface, game)
+        draw_pieces(surface, game)
         pygame.display.update()
         clock.tick(12)
-                
-
-
-
-        
-
-
 
 def start_display():
     # Filling Background
