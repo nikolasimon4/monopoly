@@ -789,7 +789,6 @@ def draw_player_label(surface: pygame.Surface, player: monopoly.Player):
     selected_rect = selectedtext.get_rect(
         center = (PLAYER_XPOS + (DISPLAY_WIDTH - PLAYER_XPOS) // 2, PLAYER_YPOS - BORDER // 2))
     surface.blit(selectedtext, selected_rect)
-
     
 def draw_game_info(surface: pygame.Surface, game: monopoly.Monopoly)
 
