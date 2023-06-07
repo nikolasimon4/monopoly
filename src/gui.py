@@ -406,7 +406,10 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
     
 
     for row in range(1,9):
-        
+        if prop.both and  4 <= row <= 6:
+            small_text.set_underline(True)
+        if not prop.both and 1 <= row <= 3:
+            small_text.set_underline(True)
         if row == 1:
             text = small_text.render('   If one "Utility" is owned', True, TEXT_COLOR)
         if row == 2:
@@ -428,7 +431,7 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
             + height // 3 + PROPCARD_TEXT_SPACING + LINE_WIDTH 
             + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + LINE_WIDTH + 
             (small_spacing + FONTSIZE) * row))
-    
+        small_text.set_underline(False)
     if prop.morgaged:
         morgage_text = small_text.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
         
@@ -500,7 +503,8 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
     
 
     for row in range(1,7):
-        
+        if prop.num_owned == row:
+            small_text.set_underline(True)
         if row == 1:
             text = small_text.render(f'Rent                                 ${prop.rents[row]}', True, TEXT_COLOR)
         if row == 2:
@@ -518,25 +522,26 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
             + height // 3 + PROPCARD_TEXT_SPACING + LINE_WIDTH 
             + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + LINE_WIDTH + 
             (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * row))
+        small_text.set_underline(False)
 
-        if prop.morgaged:
-            
-            morgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
-            
-            
-            prop_card.blit(morgage_text,  (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
-                + height // 3 + PROPCARD_TEXT_SPACING 
-                + PROPCARD_TEXT_SPACING + FONTSIZE + LINE_WIDTH + 
-                (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 7))
+    if prop.morgaged:
+        
+        morgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
+        
+        
+        prop_card.blit(morgage_text,  (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+            + height // 3 + PROPCARD_TEXT_SPACING 
+            + PROPCARD_TEXT_SPACING + FONTSIZE + LINE_WIDTH + 
+            (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 7))
 
-            morgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
+        morgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
 
-            prop_card.blit(morgage_text,   (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
-                + height // 3 
-                + FONTSIZE + LINE_WIDTH + 
-                (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 8 - PROPCARD_TEXT_SPACING))
+        prop_card.blit(morgage_text,   (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+            + height // 3 
+            + FONTSIZE + LINE_WIDTH + 
+            (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 8 - PROPCARD_TEXT_SPACING))
 
-        pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
+    pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
 
 
     return prop_card
@@ -779,9 +784,14 @@ def clear_player_display(surface: pygame.Surface):
 
 
     
+def draw_player_label(surface: pygame.Surface, player: monopoly.Player):
+    selectedtext = LABELFONT.render(f"Player {player.pnum}", True, TEXT_COLOR, BACKGROUND_COLOR)
+    selected_rect = selectedtext.get_rect(
+        center = (PLAYER_XPOS + (DISPLAY_WIDTH - PLAYER_XPOS) // 2, PLAYER_YPOS - BORDER // 2))
+    surface.blit(selectedtext, selected_rect)
+
     
-    
-    
+def draw_game_info(surface: pygame.Surface, game: monopoly.Monopoly)
 
 
 
@@ -860,6 +870,7 @@ def play_monopoly(game: monopoly.Monopoly):
     while not done:
         
         if turn != game.turn:
+            draw_player_label(surface, game.player_turn)
             clear_player_display(surface)
             propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
             turn = game.turn
@@ -961,7 +972,7 @@ def start_display():
         center = (xpos + PROPCARD_WIDTH // 2, ypos - BORDER // 2))
     s.blit(selectedtext, selected_rect)
     # Text to indicate position of current player info
-    selectedtext = LABELFONT.render("Player", True, TEXT_COLOR)
+    selectedtext = LABELFONT.render("Player 1", True, TEXT_COLOR)
     selected_rect = selectedtext.get_rect(
         center = (PLAYER_XPOS + (DISPLAY_WIDTH - PLAYER_XPOS) // 2, PLAYER_YPOS - BORDER // 2))
     s.blit(selectedtext, selected_rect)
