@@ -579,7 +579,7 @@ class Monopoly():
     def can_buy(self, tile: GameTileType) -> bool:
         return ((isinstance(tile, Property) or isinstance(tile, Utility) or 
             isinstance(tile, Railroad)) and (tile.pos == self.ploc[self.turn]) 
-            and (tile.owner is None))
+            and (tile.owner is None) and tile.price <= self.player_turn.money)
 
 
     def current_tile(self) -> GameTileType:
@@ -645,7 +645,7 @@ class Monopoly():
             
         assert (prop.pos == self.ploc[self.turn]), "You cannot buy a property you do not occupy"
         assert prop.owner is None, "You cannot buy a property someone already owns"
-        
+        assert self.player_turn.money >= prop.price, "You cannot afford this tile, morgage properties to raise money or put it up for auction"
         propnum = prop.propnum
         
         self.player_turn.money -= prop.price
@@ -793,7 +793,7 @@ class Monopoly():
 
 
         if 1 <= self.player_turn.jail <= 2:
-            self.turn_taken = True
+            self.player_turn.jail += 1
             return
 
         
@@ -1028,7 +1028,37 @@ class Monopoly():
         if prop.houses == 5:
             if self.houses < 4:
                 return False
+        propnum = prop.propnum
+
+        if 1 <= propnum <= 2:
+            propnum2 = 1
+            propnum3 = 2
+        elif 3 <= propnum <= 20:
+            if propnum % 3 == 0:
+
+                propnum2 = propnum + 1
+                propnum3 = propnum + 2
+            elif propnum % 3 == 1:
+                propnum2 = propnum + 1
+                propnum3 = propnum - 1
+            elif propnum % 3 == 2:
+                propnum2 = propnum - 1
+                propnum3 = propnum - 2
+        elif 21 <= propnum <= 22:
+            propnum2 = 21
+            propnum3 = 22
         
+
+        prop2 = self.prop_dict[propnum2]
+        prop3 = self.prop_dict[propnum3]
+
+
+        assert isinstance(prop2, Property)
+        assert isinstance(prop3, Property)
+        
+        if prop.houses - prop2.houses < 0 or prop.houses - prop3.houses < 0:
+            return False
+
         return True
 
     def sell_house(self, prop: Property):
@@ -1041,6 +1071,38 @@ class Monopoly():
         
         assert prop.houses >= 1, "There are no houses on this property"
         
+        
+        propnum = prop.propnum
+
+        if 1 <= propnum <= 2:
+            propnum2 = 1
+            propnum3 = 2
+        elif 3 <= propnum <= 20:
+            if propnum % 3 == 0:
+
+                propnum2 = propnum + 1
+                propnum3 = propnum + 2
+            elif propnum % 3 == 1:
+                propnum2 = propnum + 1
+                propnum3 = propnum - 1
+            elif propnum % 3 == 2:
+                propnum2 = propnum - 1
+                propnum3 = propnum - 2
+        elif 21 <= propnum <= 22:
+            propnum2 = 21
+            propnum3 = 22
+        
+
+        prop2 = self.prop_dict[propnum2]
+        prop3 = self.prop_dict[propnum3]
+
+
+        assert isinstance(prop2, Property)
+        assert isinstance(prop3, Property)
+
+        assert prop.houses - prop2.houses >= 0, f"Sell houses on {prop2.name} first"
+        assert prop.houses - prop3.houses >= 0, f"Sell houses on {prop3.name} first"
+
         if prop.houses == 5:
             assert self.houses >= 4, "Not enough houses left to sell your hotel"
             self.hotels += 1
