@@ -1,7 +1,7 @@
 import pygame
 import monopoly
 import sys, os
-from typing import Union, Tuple, Callable, List, Set
+from typing import Union, Tuple, Callable, List, Set, Dict
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 
@@ -91,6 +91,26 @@ PLAYER_PIECES = {
 
 
 }
+
+def draw_chance_card():
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -700,7 +720,7 @@ def draw_button_on_display(surface: pygame.Surface, button: Union["Button", "Pro
     else:
         surface.blit(button.inactive_image, button.pos)
 
-def draw_buttons_onto_display(surface: pygame.Surface, buttons: Set[Union["Button", "PropertyButton"]], game: monopoly.Monopoly, prop: monopoly.GameTileType):
+def draw_buttons_onto_display(surface: pygame.Surface, buttons: Union[Set["Button"], Set["PropertyButton"]], game: monopoly.Monopoly, prop: monopoly.GameTileType):
     for button in buttons:
         draw_button_on_display(surface, button, game, prop)
 
@@ -720,7 +740,7 @@ def draw_dice(surface: pygame.Surface, game: monopoly.Monopoly):
 
 def draw_pieces(surface: pygame.Surface, game: monopoly.Monopoly):
 
-    pcount = {}
+    pcount: Dict[int, Dict[int, List[int]]]  = {}
 
     for pnum in range(1, game.num_players + 1):
         quad, dist = game.ploc[pnum]
@@ -926,7 +946,7 @@ def play_monopoly(game: monopoly.Monopoly):
 
     selected_tile = game.prop_dict[1]
     
-    active_buttons = {PLUS_ONE_HOUSE, MINUS_ONE_HOUSE, MORGAGE_PROPERTY, BUY_PROPERTY, START_AUCTION,ROLL_DICE}
+    active_buttons = {PLUS_ONE_HOUSE, MINUS_ONE_HOUSE, MORGAGE_PROPERTY, BUY_PROPERTY, START_AUCTION,ROLL_DICE, IN_JAIL}
     
     
     turn = game.turn
@@ -1027,7 +1047,6 @@ def play_monopoly(game: monopoly.Monopoly):
                         print_error_message(surface, "")
 
 
-
         gameinfo(game, surface)
         select_tile(surface, selected_tile)
         draw_dice(surface, game)
@@ -1081,7 +1100,7 @@ class Button():
 
     def __init__(self, pos: Tuple[int, int], active_image: pygame.Surface, 
         inactive_image: pygame.Surface,
-        effect: Callable[[monopoly.Monopoly, BUYABLE_TILE], List[BUYABLE_TILE]],
+        effect: Callable[[monopoly.Monopoly, monopoly.GameTileType], List[monopoly.GameTileType]],
         isactive: Callable[[monopoly.Monopoly, monopoly.GameTileType], bool]):
         
         self.pos = pos
@@ -1101,7 +1120,7 @@ class Button():
 
         return (x1 <= xpos <= x1 + width) and (y1 <= ypos <= y1 + height)
     
-    def apply_effect(self, game: monopoly.Monopoly, prop: BUYABLE_TILE) -> List[BUYABLE_TILE]:
+    def apply_effect(self, game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
         return self.effect(game, prop)
     def active(self, game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
         return self.isactive(game, prop)
@@ -1149,10 +1168,10 @@ def draw_player_property(prop: BUYABLE_TILE) -> pygame.Surface:
     return propcrop
 
 
-def player_prop_button_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE) -> List[BUYABLE_TILE]:
+def player_prop_button_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
 
     return []
-def player_prop_button_legal(game: monopoly.Monopoly, prop: BUYABLE_TILE) -> List[BUYABLE_TILE]:
+def player_prop_button_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     return True
     
 
@@ -1160,11 +1179,16 @@ def player_prop_button_legal(game: monopoly.Monopoly, prop: BUYABLE_TILE) -> Lis
 
 
 # +1 House Button
-def plus_one_house_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
-    game.build_house(prop)
+def plus_one_house_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    
+    assert isinstance(prop, monopoly.Property), "Big problem with +1 house effect"
+
+    game.build_house(prop) 
     return [prop]
+
 def plus_one_house_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     return game.can_build(prop)
+
 PLUS_ONE_HOUSE = Button(
     (PROPCARD_XPOS + BUTTON_PADDING, PROPCARD_YPOS + PROPCARD_HEIGHT + BUTTON_PADDING),
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "+1 House", ACTIVE_BUTTON_BACKGROUND),
@@ -1172,11 +1196,16 @@ PLUS_ONE_HOUSE = Button(
     plus_one_house_effect, plus_one_house_legal)
 
 # -1 House Button
-def minus_one_house_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+def minus_one_house_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    
+    assert isinstance(prop, monopoly.Property), "Big Problem with -1 house effect"
+
     game.sell_house(prop)
     return [prop]
-def minus_one_house_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+
+def minus_one_house_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     return game.can_sell(prop)
+
 MINUS_ONE_HOUSE = Button(
     (PROPCARD_XPOS + (PROPCARD_WIDTH // 2 + BUTTON_PADDING), PROPCARD_YPOS + PROPCARD_HEIGHT + BUTTON_PADDING),
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "-1 House", ACTIVE_BUTTON_BACKGROUND),
@@ -1184,10 +1213,14 @@ MINUS_ONE_HOUSE = Button(
     minus_one_house_effect, minus_one_house_legal)
 
 # Buy Property Button
-def buy_property_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+
+def buy_property_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    if not(isinstance(prop, monopoly.Property) or isinstance(prop, monopoly.Utility) or isinstance(prop, monopoly.Railroad)):
+        raise AssertionError("Big Problem with buy property effect")
     game.buy_property(prop)
     return [prop]
-def buy_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+
+def buy_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     return game.can_buy(prop)
 BUY_PROPERTY = Button(
     (PROPCARD_XPOS + BUTTON_PADDING, 
@@ -1197,10 +1230,10 @@ BUY_PROPERTY = Button(
     buy_property_effect, buy_property_legal)
 
 # Start Auction Button
-def start_auction_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+def start_auction_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
     game.start_auction()
     return []
-def start_auction_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+def start_auction_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     return game.can_start_auction(prop)
 START_AUCTION = Button(
     (PROPCARD_XPOS + (PROPCARD_WIDTH // 2) + BUTTON_PADDING, 
@@ -1210,12 +1243,18 @@ START_AUCTION = Button(
     start_auction_effect, start_auction_legal)
 
 # Morgage Property Button
-def morgage_property_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+def morgage_property_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    
+    if not(isinstance(prop, monopoly.Property) or isinstance(prop, monopoly.Utility) or isinstance(prop, monopoly.Railroad)):
+        raise AssertionError("Big Problem with morgage property effect")
+
     game.morgage_property(prop)
     return [prop]
-def morgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+
+def morgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     
     return game.can_morgage(prop)
+
 MORGAGE_PROPERTY = Button(
     (PROPCARD_XPOS + BUTTON_PADDING, 
     PROPCARD_YPOS + PROPCARD_HEIGHT + 3 * BUTTON_PADDING + 2 * BUTTON_HEIGHT),
@@ -1224,12 +1263,17 @@ MORGAGE_PROPERTY = Button(
     morgage_property_effect, morgage_property_legal)
 
 # Unmorgage Property Button
-def unmorgage_property_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE):
+
+def unmorgage_property_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]: 
+    if not(isinstance(prop, monopoly.Property) or isinstance(prop, monopoly.Utility) or isinstance(prop, monopoly.Railroad)):
+        raise AssertionError("Big Problem with unmorgage prop effect")
     game.unmorgage_property(prop)
     return [prop]
-def unmorgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType):
+
+def unmorgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     
     return game.can_unmorgage(prop)
+
 UNMORGAGE_PROPERTY = Button(
     (PROPCARD_XPOS + BUTTON_PADDING, 
     PROPCARD_YPOS + PROPCARD_HEIGHT + 3 * BUTTON_PADDING + 2 * BUTTON_HEIGHT),
@@ -1238,15 +1282,18 @@ UNMORGAGE_PROPERTY = Button(
     unmorgage_property_effect, unmorgage_property_legal)
 
 # Take Turn Button (Roll Dice + Move)
-def take_turn_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE) -> List[monopoly.GameTileType]:
+
+def take_turn_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
     affected_tiles = [game.current_tile()]
     
     game.take_turn()
-
+    
     affected_tiles.append(game.current_tile())
     return affected_tiles
-def take_turn_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+
+def take_turn_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     return game.can_take_turn()
+
 ROLL_DICE = Button(
     (PROPCARD_XPOS, 
     DISPLAY_HEIGHT - BORDER - TILE_HEIGHT),
@@ -1255,16 +1302,32 @@ ROLL_DICE = Button(
     take_turn_effect, take_turn_legal)
 
 # End Turn Button
-def end_turn_effect(game: monopoly.Monopoly, prop: BUYABLE_TILE) -> List[monopoly.GameTileType]:
+
+def end_turn_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
     game.end_turn()
     return []
-def end_turn_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+
+def end_turn_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     return game.can_end_turn()
+
 END_TURN = Button(
     (PROPCARD_XPOS, 
     DISPLAY_HEIGHT - BORDER - TILE_HEIGHT),
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", ACTIVE_BUTTON_BACKGROUND),
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", INACTIVE_BUTTON_BACKGROUND),
     end_turn_effect, end_turn_legal)
-# Pay 50 to Exit Jail Button
+
+# In Jail Buttons
+
+def in_jail_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    return []
+def in_jail_true(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+
+    return game.player_turn.jail != 0
+IN_JAIL = Button(
+    (PLAYER_XPOS + (DISPLAY_WIDTH - PLAYER_XPOS - BUTTON_WIDTH) // 2, 
+    PLAYER_YPOS - BUTTON_HEIGHT - BUTTON_PADDING - BORDER),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "IN JAIL", (200, 0, 0)),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "FREE", (0, 200, 0)),
+    in_jail_effect, in_jail_true)
 

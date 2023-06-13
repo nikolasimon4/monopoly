@@ -357,6 +357,20 @@ class Event_Card():
     def apply_card(self, game: "Monopoly"):
         self.effect(game)
 
+
+class Chance_Card(Event_Card):
+    def __init__(self, name: str, description: str, image: str, 
+        effect: Callable[["Monopoly"], None]):
+        
+        super().__init__(name, description, image, effect)
+
+
+class Community_Chest_Card(Event_Card):
+    def __init__(self, name: str, description: str, image: str, 
+        effect: Callable[["Monopoly"], None]):
+        
+        super().__init__(name, description, image, effect)
+
 def advance_to_go(game: "Monopoly"):
     game.passgo()
     game.ploc[game.turn] = (3,9)
@@ -367,19 +381,19 @@ def school_tax(game: "Monopoly"):
     game.center_money += 150
 
 CHANCE_DECK = {
-    0: Event_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
+    0: Chance_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
         advance_to_go),
-    1: Event_Card("Go to Jail", "Go Directly to Jail", "jail.png",
+    1: Chance_Card("Go to Jail", "Go Directly to Jail", "jail.png",
         go_to_jail),
-    2: Event_Card("School Tax", "Pay school tax of $150", "school_tax.png", 
+    2: Chance_Card("School Tax", "Pay school tax of $150", "school_tax.png", 
         school_tax)}
 
 COMMUNITY_CHEST_DECK = {
-    0: Event_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
+    0: Community_Chest_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
         advance_to_go),
-    1: Event_Card("Go to Jail", "Go Directly to Jail", "jail.png",
+    1: Community_Chest_Card("Go to Jail", "Go Directly to Jail", "jail.png",
         go_to_jail),
-    2: Event_Card("School Tax", "Pay school tax of $150", "school_tax.png",
+    2: Community_Chest_Card("School Tax", "Pay school tax of $150", "school_tax.png",
         school_tax)}
 
 
@@ -491,8 +505,8 @@ class Monopoly():
     turn_taken: bool
     auction: Optional[Auction]
     isauction: bool
-    chance_deck: Dict[int, Event_Card]
-    community_chest_deck: Dict[int, Event_Card]
+    chance_deck: Dict[int, Chance_Card]
+    community_chest_deck: Dict[int, Community_Chest_Card]
     chance_order: List[int]
     community_chest_order: List[int]
 
@@ -748,11 +762,12 @@ class Monopoly():
     def exit_jail(self) -> None:
         if self.player_turn.get_out:
             self.player_turn.get_out = False
-            return
         else:
             self.player_turn.money -= 50 
             self.center_money += 50
-    def can_take_turn(self) -> None:
+        self.player_turn.jail = 0 
+    
+    def can_take_turn(self) -> bool:
         if self.isauction:
             return False
         if self.turn_taken:
@@ -880,7 +895,7 @@ class Monopoly():
         if not (isinstance(prop, Railroad) or isinstance(prop, Property) or isinstance(prop, Utility)):
             return False
         return not prop.morgaged and prop.owner is self.player_turn
-    def morgage_property(self, prop: Property) -> None:
+    def morgage_property(self, prop: Union[Railroad, Property, Utility]) -> None:
         
         assert prop in self.player_turn.proplist, "You don't own this Property"
         
@@ -897,7 +912,7 @@ class Monopoly():
         if not (isinstance(prop, Railroad) or isinstance(prop, Property) or isinstance(prop, Utility)):
             return False
         return prop.morgaged and prop.owner is self.player_turn 
-    def unmorgage_property(self, prop: Property) -> None:
+    def unmorgage_property(self, prop: Union[Railroad, Property, Utility]) -> None:
         assert prop in self.player_turn.proplist,("You don't own this Property")
         
         assert prop.morgaged, "This property is not morgaged"
@@ -1126,7 +1141,7 @@ class Monopoly():
 
     
 
-    def can_end_turn(self) -> None:
+    def can_end_turn(self) -> bool:
         if self.isauction:
             return False
         cur_tile = self.current_tile()
