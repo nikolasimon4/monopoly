@@ -946,7 +946,7 @@ def play_monopoly(game: monopoly.Monopoly):
 
     selected_tile = game.prop_dict[1]
     
-    active_buttons = {PLUS_ONE_HOUSE, MINUS_ONE_HOUSE, MORGAGE_PROPERTY, BUY_PROPERTY, START_AUCTION,ROLL_DICE, IN_JAIL}
+    active_buttons = {PLUS_ONE_HOUSE, MINUS_ONE_HOUSE, MORGAGE_PROPERTY, BUY_PROPERTY, START_AUCTION,ROLL_DICE, IN_JAIL, PAY50, GETOUT}
     
     
     turn = game.turn
@@ -1331,3 +1331,31 @@ IN_JAIL = Button(
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "FREE", (0, 200, 0)),
     in_jail_effect, in_jail_true)
 
+# Pay 50 to exit jail
+def pay_50_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    game.pay_50_get_out()
+    return [game.board[0][9]]
+def pay_50_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+    return game.player_turn.jail != 0 and game.player_turn.money >= 50
+
+PAY50 = Button(
+    (BORDER + BOARD_WINDOW + BORDER, DISPLAY_HEIGHT - BORDER - TILE_HEIGHT - BUTTON_HEIGHT - BUTTON_PADDING),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT $50", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT $50", INACTIVE_BUTTON_BACKGROUND),
+    pay_50_effect, pay_50_legal)
+
+
+def get_out_free_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    
+    game.get_out_free()
+    
+    return [game.board[0][9]]
+
+def get_out_free_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+    return game.player_turn.jail != 0 and game.player_turn.get_out
+
+GETOUT = Button(
+    (BORDER + BOARD_WINDOW + BORDER + BUTTON_PADDING + SMALL_BUTTON_WIDTH, DISPLAY_HEIGHT - BORDER - TILE_HEIGHT - BUTTON_HEIGHT - BUTTON_PADDING),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT FREE", ACTIVE_BUTTON_BACKGROUND),
+    draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT FREE", INACTIVE_BUTTON_BACKGROUND),
+    get_out_free_effect, get_out_free_legal)

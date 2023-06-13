@@ -766,6 +766,17 @@ class Monopoly():
             self.player_turn.money -= 50 
             self.center_money += 50
         self.player_turn.jail = 0 
+    def get_out_free(self) -> None:
+        assert self.player_turn.jail != 0, "You are not in jail"
+        assert self.player_turn.get_out, "You don't have a get out of jail free card"
+        self.player_turn.get_out = False
+        self.player_turn.jail = 0
+    
+    def pay_50_get_out(self) -> None:
+        assert self.player_turn.jail != 0, "You are not in jail"
+        assert self.player_turn.money >= 50, "You do not have enough money"
+        self.player_turn.money -= 50
+        self.player_turn.jail = 0
     
     def can_take_turn(self) -> bool:
         if self.isauction:
@@ -1159,10 +1170,6 @@ class Monopoly():
         return True
 
     def end_turn(self) -> None:
-
-
-
-
 
         assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
         cur_tile = self.current_tile()
