@@ -46,24 +46,26 @@ PLAYER_YPOS = PROPCARD_YPOS
 HOUSE_SPACING: int = 2
 
 BUTTON_HEIGHT = TILE_WIDTH // 2
-BUTTON_FONTSIZE = TILE_WIDTH // 3 - 1
-BUTTON_FONT = pygame.font.Font(None, size = BUTTON_FONTSIZE)
 BUTTON_PADDING = 5
 BUTTON_WIDTH = PROPCARD_WIDTH - 2 * BUTTON_PADDING
 SMALL_BUTTON_WIDTH = (BUTTON_WIDTH - BUTTON_PADDING) // 2
 
-
 GAMEINFOWIDTH = DISPLAY_WIDTH - 4 * BORDER - BOARD_WINDOW - BUTTON_WIDTH
 GAMEINFOHEIGHT = TILE_HEIGHT
 
-
-
-
-SMALLBUTTON_FONT = pygame.font.Font(None, size = round(BUTTON_FONTSIZE * .7)) 
+BUTTON_FONTSIZE = TILE_WIDTH // 3 - 1
+LABELFONTSIZE = 4 * TILE_WIDTH // 9
 FONTSIZE = TILE_WIDTH // 6 + 2
+AUCTIONBUTTON_FONTSIZE = TILE_WIDTH // 2 - 2
+
+
+AUCTION_TEXT_SPACING = 10
+
+AUCTION_BUTTON_FONT = pygame.font.Font(None, size = AUCTIONBUTTON_FONTSIZE)
+BUTTON_FONT = pygame.font.Font(None, size = BUTTON_FONTSIZE)
+SMALLBUTTON_FONT = pygame.font.Font(None, size = round(BUTTON_FONTSIZE * .7)) 
 TILETEXT = pygame.font.Font(None, size = FONTSIZE)
-LABELFONTSIZE = TILE_WIDTH // 2
-LABELFONT = pygame.font.Font(None, size = LABELFONTSIZE)
+LABELFONT = pygame.font.Font("Fonts/arial.ttf", size = LABELFONTSIZE)
 
 
 
@@ -723,7 +725,7 @@ def draw_button_on_display(surface: pygame.Surface, button: Union["Button", "Pro
     else:
         surface.blit(button.inactive_image, button.pos)
 
-def draw_buttons_onto_display(surface: pygame.Surface, buttons: Union[Set["Button"], Set["PropertyButton"]], game: monopoly.Monopoly, prop: monopoly.GameTileType):
+def draw_buttons_onto_display(surface: pygame.Surface, buttons: Union[Set["Button"], Set["PropertyButton"], Set["Change_Poss_Bid_Button"]], game: monopoly.Monopoly, prop: monopoly.GameTileType):
     for button in buttons:
         draw_button_on_display(surface, button, game, prop)
 
@@ -874,10 +876,76 @@ def gameinfo(game, surface):
     surface.blit(gameinfo, (2 * BORDER + BOARD_WINDOW + BUTTON_WIDTH + BORDER, BORDER + BOARD_WINDOW - TILE_HEIGHT))
 
 
+def draw_auction(game, surface):
+    currbidtxt = LABELFONT.render("Curr. Bid", True, TEXT_COLOR)
+    prop = game.auction.prop
+    
+    if isinstance(prop, monopoly.Railroad):
+        prop = draw_railroad_card(prop)
+    elif isinstance(prop, monopoly.Property):
+        prop = draw_property_card(prop)
+    elif isinstance(prop, monopoly.Utility):
+        prop = draw_utility_card(prop)
+
+    possbidtxt = LABELFONT.render("Your Bid", True, TEXT_COLOR)
+    
+    currbidrect = currbidtxt.get_rect(center = (
+        BORDER + TILE_HEIGHT + BORDER + (9 * TILE_WIDTH - 2 * BORDER) // 6, 
+        BORDER + TILE_HEIGHT + BORDER + + LABELFONTSIZE + AUCTION_TEXT_SPACING + LABELFONTSIZE // 2))
+    proprect = prop.get_rect(center = (
+        BORDER + TILE_HEIGHT + BORDER + (9 * TILE_WIDTH - 2 * BORDER) // 2, 
+        BORDER + TILE_HEIGHT + BORDER + LABELFONTSIZE + AUCTION_TEXT_SPACING + PROPCARD_HEIGHT // 2))
+    possbidrect = possbidtxt.get_rect(center = (
+        BORDER + TILE_HEIGHT + BORDER + (5 * (9 * TILE_WIDTH - 2 * BORDER)) // 6, 
+        BORDER + TILE_HEIGHT + BORDER + + LABELFONTSIZE + AUCTION_TEXT_SPACING + LABELFONTSIZE // 2
+        ))
+
+    surface.blit(currbidtxt, currbidrect)
+    surface.blit(prop, proprect)
+    surface.blit(possbidtxt, possbidrect)
 
 
 
+def update_bids(game, surface):
+    cover = pygame.Surface((TILE_HEIGHT, TILE_WIDTH))
+    cover.fill(BACKGROUND_COLOR)
+    surface.blit(cover,(
+        BORDER + TILE_HEIGHT + BORDER, 
+        BORDER + TILE_HEIGHT + BORDER + 2 * LABELFONTSIZE + 2 * AUCTION_TEXT_SPACING))
+    surface.blit(cover,(
+        BORDER + BOARD_WINDOW - TILE_HEIGHT - 3 * TILE_WIDTH, 
+        BORDER + TILE_HEIGHT + BORDER + 2 * LABELFONTSIZE + 2 * AUCTION_TEXT_SPACING))
+    surface.blit(cover,(
+        BORDER + TILE_HEIGHT + 3 * TILE_WIDTH + TILE_WIDTH // 2, 
+        BORDER + TILE_HEIGHT))
+    
+    currbid = game.auction.current_bid
+    possbid = game.poss_bid
 
+    currbidtxt = LABELFONT.render(f"${currbid}", True, TEXT_COLOR)
+    possbidtxt = LABELFONT.render(f"${possbid}", True, TEXT_COLOR)
+    playerturntxt = LABELFONT.render(f"Player {game.turn}", True, TEXT_COLOR)
+    
+
+    currbidrect = currbidtxt.get_rect(center = (
+        BORDER + TILE_HEIGHT + BORDER + (9 * TILE_WIDTH - 2 * BORDER) // 6, 
+        BORDER + TILE_HEIGHT + BORDER + 2 * LABELFONTSIZE + 2 * AUCTION_TEXT_SPACING + LABELFONTSIZE // 2))
+    possbidrect = possbidtxt.get_rect(center = (
+        BORDER + TILE_HEIGHT + BORDER + (5 * (9 * TILE_WIDTH - 2 * BORDER)) // 6, 
+        BORDER + TILE_HEIGHT + BORDER + 2 * LABELFONTSIZE + 2 * AUCTION_TEXT_SPACING + LABELFONTSIZE // 2))
+    playerturnrect = playerturntxt.get_rect(center = (
+        BORDER + BOARD_WINDOW // 2, 
+        BORDER + TILE_HEIGHT + BORDER + LABELFONTSIZE // 2
+    ))
+    
+    surface.blit(playerturntxt, playerturnrect)
+    surface.blit(currbidtxt, currbidrect)
+    surface.blit(possbidtxt, possbidrect)
+    
+def clear_auction(game, surface):
+    cover = pygame.Surface((BOARD_WINDOW - 2 * TILE_HEIGHT - 2 * BORDER + 5, BOARD_WINDOW - 2 * TILE_HEIGHT - 2 * BORDER + 5))
+    cover.fill(BACKGROUND_COLOR)
+    surface.blit(cover, (BORDER + TILE_HEIGHT + BORDER - 2, BORDER + TILE_HEIGHT + BORDER - 2))
 
 def print_error_message(surface: pygame.Surface, emessage: str):
     error_words = emessage.split()
@@ -946,21 +1014,29 @@ def play_monopoly(game: monopoly.Monopoly):
     selected_tile = game.prop_dict[1]
     
     active_buttons = {PLUS_ONE_HOUSE, MINUS_ONE_HOUSE, MORGAGE_PROPERTY, BUY_PROPERTY, START_AUCTION,ROLL_DICE, IN_JAIL, PAY50, GETOUT}
-    
+    auction_buttons = {PLUS1BID, MINUS1BID, PLUS10BID, MINUS10BID, PLUS100BID, MINUS100BID, BID, WITHDRAW}
     
     turn = game.turn
     propbuttons = set()
 
     # Drawing the player mat for the first time (allows loading in games with players who already have stuff
     # without having to wait a turn for the display to fully update itself)
+    
     game.player_turn.sort_prop_list()
     clear_player_display(surface)
     draw_player_label(surface, game.player_turn)
     propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
+    
+    if game.isauction:
+        draw_auction(game, surface)
+    
+    # Variables to measure a change in gamestate so that certain operations that dont have to be done every loop are not
     turn = game.turn
-
+    isauction = game.isauction
+    
+    
     while not done:
-        
+            
         if turn != game.turn:
             game.player_turn.sort_prop_list()
             clear_player_display(surface)
@@ -968,7 +1044,15 @@ def play_monopoly(game: monopoly.Monopoly):
             propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
             turn = game.turn
         
-
+        if isauction != game.isauction:
+            if game.isauction:
+                draw_auction(game, surface)
+            else:
+                clear_auction(game, surface)
+            isauction = game.isauction
+            
+        if game.isauction:
+            update_bids(game, surface)
         
         if selected_tile.morgaged:
             active_buttons.discard(MORGAGE_PROPERTY)
@@ -982,6 +1066,10 @@ def play_monopoly(game: monopoly.Monopoly):
         if not game.turn_taken:
             active_buttons.add(ROLL_DICE)
             active_buttons.discard(END_TURN)
+
+
+        if game.isauction:
+            draw_buttons_onto_display(surface, auction_buttons, game, selected_tile)
         
         draw_buttons_onto_display(surface, active_buttons, game, selected_tile)
         draw_buttons_onto_display(surface, propbuttons, game, selected_tile)
@@ -996,6 +1084,14 @@ def play_monopoly(game: monopoly.Monopoly):
                 
                 mouse_x, mouse_y = pygame.mouse.get_pos()
                 poss_tile = None
+
+                if game.isauction:
+                    for abutton in auction_buttons:
+                        if abutton.in_button((mouse_x, mouse_y)):
+                            try:
+                                abutton.apply_effect(game, selected_tile)
+                            except AssertionError as emessage:
+                                print_error_message(surface, str(emessage))
 
                 for button in active_buttons:
                     if button.in_button((mouse_x, mouse_y)):
@@ -1125,15 +1221,12 @@ class Button():
         return self.effect(game, prop)
     def active(self, game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
         return self.isactive(game, prop)
-def draw_button(width: int, height: int, text: str, background: RGBTYPE) -> pygame.Surface:
+def draw_button(width: int, height: int, text: str, background: RGBTYPE, font = SMALLBUTTON_FONT) -> pygame.Surface:
     surface = pygame.Surface((width, height))
     surface.fill(background)
     
-    if width == SMALL_BUTTON_WIDTH:
-        txtrender = SMALLBUTTON_FONT.render(text, True, BUTTON_TEXT_COLOR)
+    txtrender = font.render(text, True, BUTTON_TEXT_COLOR)
         
-    else:
-        txtrender = BUTTON_FONT.render(text, True, BUTTON_TEXT_COLOR)
     
     text_rect = txtrender.get_rect(center = (width // 2, height // 2))
     surface.blit(txtrender, text_rect)
@@ -1259,8 +1352,8 @@ def morgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType)
 MORGAGE_PROPERTY = Button(
     (PROPCARD_XPOS + BUTTON_PADDING, 
     PROPCARD_YPOS + PROPCARD_HEIGHT + 3 * BUTTON_PADDING + 2 * BUTTON_HEIGHT),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", ACTIVE_BUTTON_BACKGROUND),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", INACTIVE_BUTTON_BACKGROUND),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
     morgage_property_effect, morgage_property_legal)
 
 # Unmorgage Property Button
@@ -1278,8 +1371,8 @@ def unmorgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileTyp
 UNMORGAGE_PROPERTY = Button(
     (PROPCARD_XPOS + BUTTON_PADDING, 
     PROPCARD_YPOS + PROPCARD_HEIGHT + 3 * BUTTON_PADDING + 2 * BUTTON_HEIGHT),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", ACTIVE_BUTTON_BACKGROUND),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", INACTIVE_BUTTON_BACKGROUND),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
     unmorgage_property_effect, unmorgage_property_legal)
 
 # Take Turn Button (Roll Dice + Move)
@@ -1298,8 +1391,8 @@ def take_turn_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> boo
 ROLL_DICE = Button(
     (PROPCARD_XPOS, 
     DISPLAY_HEIGHT - BORDER - TILE_HEIGHT),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "ROLL", ACTIVE_BUTTON_BACKGROUND),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "ROLL", INACTIVE_BUTTON_BACKGROUND),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "ROLL", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "ROLL", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
     take_turn_effect, take_turn_legal)
 
 # End Turn Button
@@ -1314,8 +1407,8 @@ def end_turn_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool
 END_TURN = Button(
     (PROPCARD_XPOS, 
     DISPLAY_HEIGHT - BORDER - TILE_HEIGHT),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", ACTIVE_BUTTON_BACKGROUND),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", INACTIVE_BUTTON_BACKGROUND),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
     end_turn_effect, end_turn_legal)
 
 # In Jail "Button"
@@ -1328,8 +1421,8 @@ def in_jail_true(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
 IN_JAIL = Button(
     (PLAYER_XPOS + (DISPLAY_WIDTH - PLAYER_XPOS - BUTTON_WIDTH) // 2, 
     PLAYER_YPOS - BUTTON_HEIGHT - BUTTON_PADDING - BORDER),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "IN JAIL", (200, 0, 0)),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "FREE", (0, 200, 0)),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "IN JAIL", (200, 0, 0), BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "FREE", (0, 200, 0), BUTTON_FONT),
     in_jail_effect, in_jail_true)
 
 # Pay 50 to exit jail
@@ -1360,3 +1453,76 @@ GETOUT = Button(
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT FREE", ACTIVE_BUTTON_BACKGROUND),
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT FREE", INACTIVE_BUTTON_BACKGROUND),
     get_out_free_effect, get_out_free_legal)
+
+### AUCTIONS ###
+
+
+def withdraw_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    
+    game.withdraw()
+    
+    return []
+
+def withdraw_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+    return game.isauction
+
+WITHDRAW = Button(
+    (
+    BORDER + TILE_HEIGHT + (BOARD_WINDOW - 2 * TILE_HEIGHT - 3 * BUTTON_WIDTH) // 4, 
+    BORDER + BOARD_WINDOW - TILE_HEIGHT - 3 * BORDER - 6 * BUTTON_HEIGHT
+    ),
+    draw_button(BUTTON_WIDTH, 2 * BUTTON_HEIGHT, "Withdraw", ACTIVE_BUTTON_BACKGROUND, AUCTION_BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, 2 * BUTTON_HEIGHT, "Withdraw", INACTIVE_BUTTON_BACKGROUND, AUCTION_BUTTON_FONT),
+    withdraw_effect, withdraw_legal)
+
+def bid_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    
+    game.bid()
+    
+    return []
+
+def bid_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+    return game.can_bid()
+
+BID = Button(
+    (
+    BORDER + TILE_HEIGHT + 3 * ((BOARD_WINDOW - 2 * TILE_HEIGHT - 3 * BUTTON_WIDTH) // 4) + 2 * BUTTON_WIDTH, 
+    BORDER + BOARD_WINDOW - TILE_HEIGHT - 3 * BORDER - 6 * BUTTON_HEIGHT
+    ),
+    draw_button(BUTTON_WIDTH, 2 * BUTTON_HEIGHT, "Bid", ACTIVE_BUTTON_BACKGROUND, AUCTION_BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, 2 * BUTTON_HEIGHT, "Bid", INACTIVE_BUTTON_BACKGROUND, AUCTION_BUTTON_FONT),
+    bid_effect, bid_legal)
+    
+
+
+
+class Change_Poss_Bid_Button(Button):
+    def __init__(self, pos: Tuple[int, int], possbidchange: int):
+        if possbidchange > 0:
+            self.buttonstring = f"+ {possbidchange}"
+        else:
+            self.buttonstring = f"- {abs(possbidchange)}"
+
+
+        def change_poss_bid_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+            game.change_poss_bid(possbidchange)
+            return []
+        def change_poss_bid_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+            return game.can_change_poss_bid(possbidchange)
+            
+            
+
+        super().__init__(
+            pos, draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, self.buttonstring, ACTIVE_BUTTON_BACKGROUND, AUCTION_BUTTON_FONT),
+            draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, self.buttonstring, INACTIVE_BUTTON_BACKGROUND, AUCTION_BUTTON_FONT),
+            change_poss_bid_effect, change_poss_bid_legal)
+
+# Plus $1
+PLUS1BID = Change_Poss_Bid_Button((BORDER + TILE_HEIGHT + (BOARD_WINDOW - 2 * TILE_HEIGHT - 3 * BUTTON_WIDTH) // 4, BORDER + BOARD_WINDOW - TILE_HEIGHT - 2 * BORDER - 4 * BUTTON_HEIGHT), 1)
+MINUS1BID = Change_Poss_Bid_Button((BORDER + TILE_HEIGHT + (BOARD_WINDOW - 2 * TILE_HEIGHT - 3 * BUTTON_WIDTH) // 4, BORDER + BOARD_WINDOW - TILE_HEIGHT - BORDER - 2 * BUTTON_HEIGHT), -1)
+
+PLUS10BID = Change_Poss_Bid_Button((BORDER + TILE_HEIGHT + 2 * ((BOARD_WINDOW - 2 * TILE_HEIGHT - 3 * BUTTON_WIDTH) // 4) + BUTTON_WIDTH, BORDER + BOARD_WINDOW - TILE_HEIGHT - 2 * BORDER - 4 * BUTTON_HEIGHT), 10)
+MINUS10BID = Change_Poss_Bid_Button((BORDER + TILE_HEIGHT + 2 * ((BOARD_WINDOW - 2 * TILE_HEIGHT - 3 * BUTTON_WIDTH) // 4) + BUTTON_WIDTH, BORDER + BOARD_WINDOW - TILE_HEIGHT - BORDER - 2 * BUTTON_HEIGHT), -10)
+
+PLUS100BID = Change_Poss_Bid_Button((BORDER + TILE_HEIGHT + 3 * ((BOARD_WINDOW - 2 * TILE_HEIGHT - 3 * BUTTON_WIDTH) // 4) + 2 * BUTTON_WIDTH, BORDER + BOARD_WINDOW - TILE_HEIGHT - 2 * BORDER - 4 * BUTTON_HEIGHT), 100)
+MINUS100BID = Change_Poss_Bid_Button((BORDER + TILE_HEIGHT + 3 * ((BOARD_WINDOW - 2 * TILE_HEIGHT - 3 * BUTTON_WIDTH) // 4) + 2 * BUTTON_WIDTH, BORDER + BOARD_WINDOW - TILE_HEIGHT - BORDER - 2 * BUTTON_HEIGHT), -100)

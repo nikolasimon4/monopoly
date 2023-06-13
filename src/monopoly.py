@@ -442,9 +442,6 @@ class Auction():
         self.current_bid: int = 0
     
     def bid(self, val: int):
-        assert self.game.auction, "There is no current auction happening"
-        assert self.game.player_turn.money >= val, "You do not have enough money"
-        assert val > self.current_bid, "You must bid more than the current bid"
         
         self.current_bid = val
         
@@ -477,6 +474,7 @@ class Auction():
 
             self.game.turn = self.saveturn
             self.game.player_turn = self.game.pdict[self.saveturn]
+            self.game.poss_bid = 1
 
         else:
             self.game.turn = self.game.turn % self.game.num_players + 1 
@@ -509,7 +507,7 @@ class Monopoly():
     community_chest_deck: Dict[int, Community_Chest_Card]
     chance_order: List[int]
     community_chest_order: List[int]
-
+    poss_bid: int
 
 
     def __init__(self, num_players: int, startcash: int = 1500):
@@ -547,6 +545,7 @@ class Monopoly():
         
         self.auction = None
         self.isauction = False
+        self.poss_bid = 1
 
         self.chance_deck = CHANCE_DECK
         self.chance_order = [i for i in range(len(CHANCE_DECK.keys()))]
@@ -568,10 +567,29 @@ class Monopoly():
     def make_auction(self, prop: Union[Property, Utility, Railroad]) -> None:
         self.auction = Auction(prop, self)
     
-    def bid(self, bid: int) -> None:
+    def bid(self) -> None:
         assert self.isauction, "There is no auction currently happening"
         assert self.auction is not None
-        self.auction.bid(bid)
+        assert self.player_turn.money >= self.poss_bid, "You do not have enough money"
+        assert self.poss_bid > self.auction.current_bid, "You must bid more than the current bid"
+
+        self.auction.bid(self.poss_bid)
+    def can_bid(self) -> bool:
+        return self.isauction and (self.auction is not None) and self.player_turn.money >= self.poss_bid and self.poss_bid > self.auction.current_bid
+
+    def change_poss_bid(self, inc: int) -> None:
+        assert self.isauction, "There is no auction currently happening"
+        assert self.auction is not None
+        assert self.player_turn.money >= self.poss_bid + inc, "You do not have enough money"
+        assert self.poss_bid + inc > self.auction.current_bid, "You must bid more than the current bid"
+        self.poss_bid += inc
+    
+    def can_change_poss_bid(self, inc: int) -> bool:
+        return (self.isauction 
+            and self.auction is not None
+            and self.player_turn.money >= self.poss_bid + inc 
+            and self.poss_bid + inc > self.auction.current_bid)
+
     def withdraw(self) -> None:
         assert self.isauction, "There is no auction currently happening"
         assert self.auction is not None, "Cannot withdraw from a nonexistant auction"
@@ -587,6 +605,8 @@ class Monopoly():
             return False
         if cur_tile.owner is not None:
             return False
+        if self.isauction:
+            return False
         
         return True
 
@@ -596,14 +616,19 @@ class Monopoly():
             or isinstance(cur_tile, Railroad) 
             or isinstance(cur_tile, Utility)), "Not a valid tile to auction"
         assert cur_tile.owner is None, "Can't auction an owned property"
+        assert not self.isauction, "The auction is already ongoing"
         
         self.make_auction(cur_tile)
 
 
     def can_buy(self, tile: GameTileType) -> bool:
-        return ((isinstance(tile, Property) or isinstance(tile, Utility) or 
-            isinstance(tile, Railroad)) and (tile.pos == self.ploc[self.turn]) 
-            and (tile.owner is None) and tile.price <= self.player_turn.money)
+        return (
+            (isinstance(tile, Property) or isinstance(tile, Utility) or 
+            isinstance(tile, Railroad)) 
+            and (tile.pos == self.ploc[self.turn]) 
+            and (tile.owner is None) 
+            and tile.price <= self.player_turn.money
+            and not self.isauction)
 
 
     def current_tile(self) -> GameTileType:
@@ -670,6 +695,7 @@ class Monopoly():
         assert (prop.pos == self.ploc[self.turn]), "You cannot buy a property you do not occupy"
         assert prop.owner is None, "You cannot buy a property someone already owns"
         assert self.player_turn.money >= prop.price, "You cannot afford this tile, morgage properties to raise money or put it up for auction"
+        assert not self.isauction, "You can't buy a property that is currently being auctioned"
         propnum = prop.propnum
         
         self.player_turn.money -= prop.price
@@ -798,7 +824,6 @@ class Monopoly():
         assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
         assert not self.turn_taken, "Turn has already been taken"        
         assert not self.done, "Game is Over"
-        
         if self.player_turn.jail == 4:
             raise AssertionError("You have spent 3 turns in jail, either pay or use a get out of jail free card")
 
@@ -836,7 +861,7 @@ class Monopoly():
         if 1 <= self.player_turn.jail <= 3:
             self.player_turn.jail += 1
             return
-
+       
         self.apply_move()
 
     def in_debt(self) -> bool:
