@@ -51,11 +51,20 @@ BUTTON_FONT = pygame.font.Font(None, size = BUTTON_FONTSIZE)
 BUTTON_PADDING = 5
 BUTTON_WIDTH = PROPCARD_WIDTH - 2 * BUTTON_PADDING
 SMALL_BUTTON_WIDTH = (BUTTON_WIDTH - BUTTON_PADDING) // 2
+
+
+GAMEINFOWIDTH = DISPLAY_WIDTH - 4 * BORDER - BOARD_WINDOW - BUTTON_WIDTH
+GAMEINFOHEIGHT = TILE_HEIGHT
+
+
+
+
 SMALLBUTTON_FONT = pygame.font.Font(None, size = round(BUTTON_FONTSIZE * .7)) 
 FONTSIZE = TILE_WIDTH // 6 + 2
 TILETEXT = pygame.font.Font(None, size = FONTSIZE)
 LABELFONTSIZE = TILE_WIDTH // 2
 LABELFONT = pygame.font.Font(None, size = LABELFONTSIZE)
+
 
 
 
@@ -70,7 +79,16 @@ DICE_IMAGES = {
 
 PLAYER_PIECES = {
     1: "images/RACECAR.png",
-    2: "images/DOG.png"
+    2: "images/DOG.png",
+    3: "images/DOG.png",
+    4: "images/DOG.png",
+    5: "images/DOG.png",
+    6: "images/DOG.png",
+    7: "images/DOG.png",
+    8: "images/DOG.png",
+    9: "images/DOG.png",
+    10: "images/DOG.png"
+
 
 }
 
@@ -727,7 +745,7 @@ def draw_player_piece(surface: pygame.Surface, game: monopoly.Monopoly, plist: L
     tilex, tiley = tile_loc(game.board[pquad][pdist])
 
     if pdist == 9 and num_same_loc > 1:
-        num_same_loc = num_same_loc // 2
+        num_same_loc = (num_same_loc + 1) // 2
     
     row = 0
     
@@ -771,9 +789,9 @@ def make_propcard_player_buttons(proplist: List[BUYABLE_TILE]) -> Set["PropertyB
         buttonset.add(propbutton)
         translationy += propimg.get_height() + PROPCARD_TEXT_SPACING
         
-        if translationy == BOARD_WINDOW - BORDER - 2 * TILE_HEIGHT:
+        if translationy >= BOARD_WINDOW - BORDER - 2 * TILE_HEIGHT:
             translationy = 0
-            translationx += PROPCARD_WIDTH // 2
+            translationx += PROPCARD_WIDTH // 2 + PROPCARD_TEXT_SPACING
     return buttonset
 
 
@@ -790,7 +808,55 @@ def draw_player_label(surface: pygame.Surface, player: monopoly.Player):
         center = (PLAYER_XPOS + (DISPLAY_WIDTH - PLAYER_XPOS) // 2, PLAYER_YPOS - BORDER // 2))
     surface.blit(selectedtext, selected_rect)
     
-def draw_game_info(surface: pygame.Surface, game: monopoly.Monopoly)
+def gameinfo(game, surface):
+    gameinfo = pygame.Surface((GAMEINFOWIDTH, GAMEINFOHEIGHT))
+    gameinfo.fill(BACKGROUND_COLOR)
+    num_players = game.num_players
+
+    padding = 4
+
+    if num_players >= 7:
+        fontsize = round(BUTTON_FONTSIZE * (8.5 / 10) ** (num_players - 6))
+    else:
+        fontsize = BUTTON_FONTSIZE
+    
+    font = pygame.font.Font(None, size = fontsize) 
+
+    numdone = 0
+
+    for player in game.pdict.values():
+        playercard = pygame.Surface((GAMEINFOWIDTH // num_players - padding, GAMEINFOHEIGHT))
+        playercard.fill(BACKGROUND_COLOR)
+        
+        playernumtext = font.render(f"Player {player.pnum}", True, TEXT_COLOR)
+        playernumrect = playernumtext.get_rect(center = ((GAMEINFOWIDTH // num_players - padding) // 2, GAMEINFOHEIGHT // 6))
+        playercard.blit(playernumtext, playernumrect)
+
+        playermoneytext = font.render(f"$ {player.money}", True, TEXT_COLOR)
+        playermoneyrect = playermoneytext.get_rect(center = ((GAMEINFOWIDTH // num_players - padding) // 2, GAMEINFOHEIGHT // 2))
+        playercard.blit(playermoneytext, playermoneyrect)
+        
+        image_load = pygame.image.load(PLAYER_PIECES[player.pnum])
+        image_load = pygame.transform.scale(image_load, (TILE_WIDTH, TILE_HEIGHT))
+        image_load = pygame.transform.scale(image_load, (TILE_WIDTH, TILE_HEIGHT))
+
+        if num_players >= 7:
+            image_load = pygame.transform.scale(image_load, (round((9 / 10) ** (num_players - 6) * TILE_WIDTH),  round((9 / 10) ** (num_players - 6) * TILE_HEIGHT)))
+        image_load_rect = image_load.get_rect(center = (((GAMEINFOWIDTH // num_players - padding) // 2, GAMEINFOHEIGHT // 2)))
+
+        playercard.blit(image_load, image_load_rect)
+
+
+
+        
+
+        gameinfo.blit(playercard,((GAMEINFOWIDTH // num_players) * numdone + padding // 2, 0))
+        numdone += 1
+    surface.blit(gameinfo, (2 * BORDER + BOARD_WINDOW + BUTTON_WIDTH + BORDER, BORDER + BOARD_WINDOW - TILE_HEIGHT))
+
+
+
+
 
 
 
@@ -866,9 +932,18 @@ def play_monopoly(game: monopoly.Monopoly):
     turn = game.turn
     propbuttons = set()
 
+    # Drawing the player mat for the first time (allows loading in games with players who already have stuff
+    # without having to wait a turn for the display to fully update itself)
+    game.player_turn.sort_prop_list()
+    draw_player_label(surface, game.player_turn)
+    clear_player_display(surface)
+    propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
+    turn = game.turn
+
     while not done:
         
         if turn != game.turn:
+            game.player_turn.sort_prop_list()
             draw_player_label(surface, game.player_turn)
             clear_player_display(surface)
             propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
@@ -911,6 +986,7 @@ def play_monopoly(game: monopoly.Monopoly):
                             if button.effect is take_turn_effect:
                                 poss_tile = game.current_tile()
                             if button.effect is buy_property_effect:
+                                game.player_turn.sort_prop_list()
                                 propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
 
                             for tile in affected_tiles:
@@ -952,12 +1028,23 @@ def play_monopoly(game: monopoly.Monopoly):
 
 
 
-        
+        gameinfo(game, surface)
         select_tile(surface, selected_tile)
         draw_dice(surface, game)
         draw_pieces(surface, game)
         pygame.display.update()
         clock.tick(12)
+
+
+
+
+
+
+
+
+
+
+
 
 def start_display():
     # Filling Background
@@ -1179,3 +1266,5 @@ END_TURN = Button(
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", ACTIVE_BUTTON_BACKGROUND),
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", INACTIVE_BUTTON_BACKGROUND),
     end_turn_effect, end_turn_legal)
+# Pay 50 to Exit Jail Button
+

@@ -403,6 +403,16 @@ class Player():
         self.get_out: bool = False
     def __str__(self):
         return f"Player {str(self.pnum)}"
+    def sort_prop_list(self):
+        tempdict = {}
+        for prop in self.proplist:
+            tempdict[prop.propnum] = prop
+        propnums = list(tempdict.keys())
+        propnums.sort()
+        self.proplist = []
+        for propnum in propnums:
+            self.proplist.append(tempdict[propnum])
+
 
 
 # Class to represent an auction
@@ -1132,12 +1142,6 @@ class Monopoly():
         if self.in_debt() and not self.is_bankrupt():
             return False
         return True
-        
-
-
-        
-        
-            
 
     def end_turn(self) -> None:
 
@@ -1176,8 +1180,6 @@ class Monopoly():
         self.turn_taken = False
 
 
-    
-        
 
 
 
