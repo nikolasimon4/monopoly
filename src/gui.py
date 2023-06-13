@@ -716,7 +716,10 @@ def de_select_tile(surface: pygame.Surface, prop: Union[monopoly.Property, monop
 
 def draw_button_on_display(surface: pygame.Surface, button: Union["Button", "PropertyButton"], game: monopoly.Monopoly, prop: monopoly.GameTileType):
     if button.active(game, prop):
+        if button.effect is in_jail_effect:
+            button.active_image = draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, f"TURN #{game.player_turn.jail - 1} IN JAIL", (200, 0, 0))
         surface.blit(button.active_image, button.pos)
+
     else:
         surface.blit(button.inactive_image, button.pos)
 
@@ -768,34 +771,30 @@ def draw_player_piece(surface: pygame.Surface, game: monopoly.Monopoly, plist: L
         num_same_loc = (num_same_loc + 1) // 2
     
     row = 0
+    if pdist == 9:
+        tile_image = pygame.Surface((TILE_HEIGHT, TILE_HEIGHT), pygame.SRCALPHA)
+    else:
+        tile_image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT), pygame.SRCALPHA)
     
     for pnum in plist:
-        if pdist == 9:
-            image_load = pygame.image.load(PLAYER_PIECES[pnum])
-            tile_image = pygame.Surface((TILE_HEIGHT, TILE_HEIGHT), pygame.SRCALPHA)
-            image_load = pygame.transform.scale(image_load, (TILE_WIDTH // num_same_loc, TILE_HEIGHT // num_same_loc))
-        else:
-            image_load = pygame.image.load(PLAYER_PIECES[pnum])
-            tile_image = pygame.Surface((TILE_WIDTH, TILE_HEIGHT), pygame.SRCALPHA)
-            image_load = pygame.transform.scale(image_load, (TILE_WIDTH // num_same_loc, TILE_HEIGHT // num_same_loc))
-
-
+        image_load = pygame.image.load(PLAYER_PIECES[pnum])
+        image_load = pygame.transform.scale(image_load, (TILE_WIDTH // num_same_loc, TILE_HEIGHT // num_same_loc))
         tile_image.blit(image_load, (row * (TILE_WIDTH // num_same_loc), TILE_HEIGHT - (TILE_HEIGHT // num_same_loc)))
-                
-        
-        if pquad == 0: 
-            pass
-        if pquad == 1:
-            tile_image = pygame.transform.rotate(tile_image, 90)
-            tile_image = pygame.transform.flip(tile_image, True, True)
-        if pquad == 2:
-            tile_image = pygame.transform.rotate(image_load, 180)
-        if pquad == 3:
-            tile_image = pygame.transform.rotate(tile_image, 270)
-            tile_image = pygame.transform.flip(tile_image, True, True)
-
-        surface.blit(tile_image, (tilex, tiley))
         row += 1 
+
+                
+    if pquad == 0: 
+        pass
+    if pquad == 1:
+        tile_image = pygame.transform.rotate(tile_image, 90)
+        tile_image = pygame.transform.flip(tile_image, True, True)
+    if pquad == 2:
+        tile_image = pygame.transform.rotate(tile_image, 180)
+    if pquad == 3:
+        tile_image = pygame.transform.rotate(tile_image, 270)
+        tile_image = pygame.transform.flip(tile_image, True, True)
+
+    surface.blit(tile_image, (tilex, tiley))
 
 def make_propcard_player_buttons(proplist: List[BUYABLE_TILE]) -> Set["PropertyButton"]:
     translationx = 0
@@ -816,9 +815,9 @@ def make_propcard_player_buttons(proplist: List[BUYABLE_TILE]) -> Set["PropertyB
 
 
 def clear_player_display(surface: pygame.Surface):
-    clearsurface = pygame.Surface((DISPLAY_WIDTH - PLAYER_XPOS, DISPLAY_HEIGHT - PLAYER_YPOS))
+    clearsurface = pygame.Surface((DISPLAY_WIDTH - PLAYER_XPOS, DISPLAY_HEIGHT - PLAYER_YPOS + BORDER))
     clearsurface.fill(BACKGROUND_COLOR)
-    surface.blit(clearsurface, (PLAYER_XPOS, PLAYER_YPOS))
+    surface.blit(clearsurface, (PLAYER_XPOS, PLAYER_YPOS - BORDER))
 
 
     
@@ -955,8 +954,8 @@ def play_monopoly(game: monopoly.Monopoly):
     # Drawing the player mat for the first time (allows loading in games with players who already have stuff
     # without having to wait a turn for the display to fully update itself)
     game.player_turn.sort_prop_list()
-    draw_player_label(surface, game.player_turn)
     clear_player_display(surface)
+    draw_player_label(surface, game.player_turn)
     propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
     turn = game.turn
 
@@ -964,8 +963,8 @@ def play_monopoly(game: monopoly.Monopoly):
         
         if turn != game.turn:
             game.player_turn.sort_prop_list()
-            draw_player_label(surface, game.player_turn)
             clear_player_display(surface)
+            draw_player_label(surface, game.player_turn)
             propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
             turn = game.turn
         
@@ -1006,6 +1005,8 @@ def play_monopoly(game: monopoly.Monopoly):
                             if button.effect is take_turn_effect:
                                 poss_tile = game.current_tile()
                             if button.effect is buy_property_effect:
+                                clear_player_display(surface)
+                                draw_player_label(surface, game.player_turn)
                                 game.player_turn.sort_prop_list()
                                 propbuttons = make_propcard_player_buttons(game.player_turn.proplist)
 
@@ -1148,12 +1149,12 @@ class PropertyButton(Button):
 
 def draw_player_property(prop: BUYABLE_TILE) -> pygame.Surface:    
     if isinstance(prop, monopoly.Utility):
-        propcrop = pygame.Surface((PROPCARD_WIDTH // 2, (PROPCARD_HEIGHT // 3 + 2 * LINE_WIDTH + PROPCARD_TEXT_SPACING * 2 + FONTSIZE) // 2))
+        propcrop = pygame.Surface((PROPCARD_WIDTH // 2, (PROPCARD_HEIGHT // 3 + 2 * LINE_WIDTH + 2 * PROPCARD_TEXT_SPACING * 2 + FONTSIZE) // 2))
         propimg = draw_utility_card(prop)
         propimg = pygame.transform.scale(propimg, (PROPCARD_WIDTH // 2, PROPCARD_HEIGHT // 2))
 
     if isinstance(prop, monopoly.Railroad):
-        propcrop = pygame.Surface((PROPCARD_WIDTH // 2, (PROPCARD_HEIGHT // 3 + 2 * LINE_WIDTH + PROPCARD_TEXT_SPACING * 2 + FONTSIZE) // 2))
+        propcrop = pygame.Surface((PROPCARD_WIDTH // 2, (PROPCARD_HEIGHT // 3 + 2 * LINE_WIDTH + 2 * PROPCARD_TEXT_SPACING * 2 + FONTSIZE) // 2))
         propimg = draw_railroad_card(prop)
         propimg = pygame.transform.scale(propimg, (PROPCARD_WIDTH // 2, PROPCARD_HEIGHT // 2))
 
@@ -1317,7 +1318,7 @@ END_TURN = Button(
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", INACTIVE_BUTTON_BACKGROUND),
     end_turn_effect, end_turn_legal)
 
-# In Jail Buttons
+# In Jail "Button"
 
 def in_jail_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
     return []
@@ -1344,7 +1345,7 @@ PAY50 = Button(
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT $50", INACTIVE_BUTTON_BACKGROUND),
     pay_50_effect, pay_50_legal)
 
-
+# Get out of jail free button
 def get_out_free_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
     
     game.get_out_free()

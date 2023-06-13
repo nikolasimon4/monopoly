@@ -790,6 +790,8 @@ class Monopoly():
             or isinstance(cur_tile, Utility) 
             or isinstance(cur_tile, Railroad)) and cur_tile.owner is None:
             return False
+        if self.player_turn.jail == 4:
+            return False
         return True
     
     def take_turn(self) -> None:
@@ -797,6 +799,9 @@ class Monopoly():
         assert not self.turn_taken, "Turn has already been taken"        
         assert not self.done, "Game is Over"
         
+        if self.player_turn.jail == 4:
+            raise AssertionError("You have spent 3 turns in jail, either pay or use a get out of jail free card")
+
 
         
         cur_tile = self.current_tile()
@@ -828,18 +833,10 @@ class Monopoly():
             
 
 
-        if 1 <= self.player_turn.jail <= 2:
+        if 1 <= self.player_turn.jail <= 3:
             self.player_turn.jail += 1
             return
 
-        
-        
-        if self.player_turn.jail == 3:
-            self.exit_jail()
-        
-
-        
-       
         self.apply_move()
 
     def in_debt(self) -> bool:
