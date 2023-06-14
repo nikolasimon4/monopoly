@@ -823,6 +823,8 @@ class Monopoly():
         self.player_turn.jail = 0
     
     def can_take_turn(self) -> bool:
+        if self.player_turn.money < 0:
+            return False
         if self.isauction:
             return False
         if self.turn_taken:
@@ -853,6 +855,9 @@ class Monopoly():
             or isinstance(cur_tile, Utility) 
             or isinstance(cur_tile, Railroad)):
             assert not cur_tile.owner is None, "You must either start an auction or purchase the current property"
+
+
+        assert not self.in_debt(), "You must morgage all properties and sell all houses"
 
         self.roll_dice()
         
