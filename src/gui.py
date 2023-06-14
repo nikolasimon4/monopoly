@@ -1101,17 +1101,33 @@ def play_monopoly(game: monopoly.Monopoly):
                             if button.effect is take_turn_effect:
                                 poss_tile = game.current_tile()
                                 card = None
+                                prevloc = game.ploc[game.turn]
                                 
-                                if isinstance(poss_tile, monopoly.Chance_Tile):
+                                if isinstance(game.landed, monopoly.Chance_Tile):
+                                    game.ploc[game.turn] = game.landed.pos
                                     card = draw_chance_card(game.lastchance)
-                                if isinstance(poss_tile, monopoly.Community_Chest_Tile):
+                                    draw_dice(surface, game)
+                                    affected_tiles.append(game.landed)
+                                    draw_tile_onto_display(surface, game.board[prevloc[0]][prevloc[1]])
+
+                                if isinstance(game.landed, monopoly.Community_Chest_Tile):
+                                    game.ploc[game.turn] = game.landed.pos
                                     card = draw_community_chest_card(game.lastcommchest)
-                                while card:
+                                    draw_dice(surface, game)
+                                    affected_tiles.append(game.landed)
+                                    draw_tile_onto_display(surface, game.board[prevloc[0]][prevloc[1]])
+
+
+
+                                while card is not None:
+                                    draw_pieces(surface, game)
                                     cardrect = card.get_rect(center = (BORDER + BOARD_WINDOW // 2, BORDER + BOARD_WINDOW // 2))
                                     surface.blit(card, cardrect)
                                     draw_button_on_display(surface, DISMISS, game, selected_tile)
-                                    
+
                                     pygame.display.update()
+                                    
+                                    events = pygame.event.get()
 
                                     for event in events:
                                         if event.type == pygame.QUIT:
@@ -1123,6 +1139,8 @@ def play_monopoly(game: monopoly.Monopoly):
                                             if DISMISS.in_button((mouse_x, mouse_y)):
                                                 card = None
                                                 cover_event(surface)
+                                                game.ploc[game.turn] = prevloc
+                                                draw_pieces(surface, game)
                                                 pygame.display.update()
 
                             if button.effect is buy_property_effect:
@@ -1493,6 +1511,20 @@ GETOUT = Button(
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT FREE", ACTIVE_BUTTON_BACKGROUND),
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "OUT FREE", INACTIVE_BUTTON_BACKGROUND),
     get_out_free_effect, get_out_free_legal)
+
+# Dismiss Event Card Button:
+
+def dismiss_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    return []
+def dismiss_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+    return True
+
+DISMISS = Button(
+    (BORDER + BOARD_WINDOW // 2 - BUTTON_WIDTH // 2, BORDER + BOARD_WINDOW - TILE_HEIGHT - TILE_HEIGHT - 2 * BUTTON_HEIGHT),
+    draw_button(BUTTON_WIDTH, 2 * BUTTON_HEIGHT, "Dismiss", ACTIVE_BUTTON_BACKGROUND, LABELFONT),
+    draw_button(BUTTON_WIDTH, 2 * BUTTON_HEIGHT, "Dismiss", ACTIVE_BUTTON_BACKGROUND, LABELFONT),
+    dismiss_effect, dismiss_legal)
+
 
 ### AUCTIONS ###
 

@@ -383,18 +383,20 @@ def school_tax(game: "Monopoly"):
 CHANCE_DECK = {
     0: Chance_Card("Advance to Go", "Go to go and collect $200", "images/Advance.png", 
         advance_to_go),
-    1: Chance_Card("Go to Jail", "Go Directly to Jail", "jail.png",
-        go_to_jail),
-    2: Chance_Card("School Tax", "Pay school tax of $150", "school_tax.png", 
-        school_tax)}
+    #1: Chance_Card("Go to Jail", "Go Directly to Jail", "jail.png",
+     #   go_to_jail),
+    #2: Chance_Card("School Tax", "Pay school tax of $150", "school_tax.png", 
+     #   school_tax)
+    }
 
 COMMUNITY_CHEST_DECK = {
     0: Community_Chest_Card("Advance to Go", "Go to go and collect $200", "images/Advance.png", 
         advance_to_go),
-    1: Community_Chest_Card("Go to Jail", "Go Directly to Jail", "jail.png",
-        go_to_jail),
-    2: Community_Chest_Card("School Tax", "Pay school tax of $150", "school_tax.png",
-        school_tax)}
+    #1: Community_Chest_Card("Go to Jail", "Go Directly to Jail", "jail.png",
+       # go_to_jail),
+   # 2: Community_Chest_Card("School Tax", "Pay school tax of $150", "school_tax.png",
+       # school_tax)
+       }
 
 
 
@@ -552,6 +554,9 @@ class Monopoly():
         self.community_chest_deck = COMMUNITY_CHEST_DECK
         self.community_chest_order = [
             i for i in range(len(COMMUNITY_CHEST_DECK.keys()))]
+        
+        
+        self.landed = None
         self.lastchance = None
         self.lastcommchest = None
         
@@ -730,7 +735,7 @@ class Monopoly():
         self.community_chest_deck[commnum].apply_card(self)
         self.lastcommchest = self.community_chest_deck[commnum]
 
-        if len(self.community_chest_order) == 0
+        if len(self.community_chest_order) == 0:
             self.community_chest_order = [
             i for i in range(len(COMMUNITY_CHEST_DECK.keys()))]
             random.shuffle(self.community_chest_order)
@@ -740,7 +745,7 @@ class Monopoly():
         self.chance_deck[chancenum].apply_card(self)
         self.lastchance = self.chance_deck[chancenum]
 
-        if len(self.chance_order) == 0
+        if len(self.chance_order) == 0:
             self.chance_order = [
             i for i in range(len(CHANCE_DECK.keys()))]
             random.shuffle(self.chance_order)
@@ -774,8 +779,10 @@ class Monopoly():
         
         self.ploc[self.turn] = (new_quad, new_dist)
 
-        landed = self.current_tile()
-
+        self.landed = self.current_tile()
+        
+        landed = self.landed
+        
         if isinstance(landed, Property) or isinstance(landed, Railroad):
             self.property_landing(landed)
         elif isinstance(landed, Utility):
@@ -872,7 +879,7 @@ class Monopoly():
         if 1 <= self.player_turn.jail <= 3:
             self.player_turn.jail += 1
             return
-       
+
         self.apply_move()
 
     def in_debt(self) -> bool:
@@ -1222,6 +1229,7 @@ class Monopoly():
             assert self.is_bankrupt(), "You must morgage all properties and sell all houses to declare bankruptcy"    
             self.bankruptcy()
         
+        self.landed = None
         self.turn = self.turn % self.num_players + 1 
         
         while self.turn not in self.active_players:
