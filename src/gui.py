@@ -30,6 +30,10 @@ LINE_BORDER_COLOR: RGBTYPE = (0, 0, 0)
 HIGHLIGHT_COLOR: RGBTYPE = (255, 255, 0)
 ACTIVE_BUTTON_BACKGROUND: RGBTYPE =  (170, 255, 190)
 INACTIVE_BUTTON_BACKGROUND: RGBTYPE =  (120, 120, 120)
+CHANCE_CARD_COLOR = (255, 102, 0)
+COMMUNITY_CHEST_CARD_COLOR = (255, 209, 0)
+
+
 
 PROPCARD_Y_PADDING: int = 5
 PROPCARD_X_PADDING: int = 5
@@ -93,10 +97,6 @@ PLAYER_PIECES = {
 
 
 }
-
-def draw_chance_card():
-    pass
-
 
 
 
@@ -716,7 +716,7 @@ def de_select_tile(surface: pygame.Surface, prop: Union[monopoly.Property, monop
     if quad == 1 or quad == 3:
         pygame.draw.rect(surface, color = LINE_BORDER_COLOR, rect = (x, y, TILE_HEIGHT, TILE_WIDTH), width = 1)
 
-def draw_button_on_display(surface: pygame.Surface, button: Union["Button", "PropertyButton"], game: monopoly.Monopoly, prop: monopoly.GameTileType):
+def draw_button_on_display(surface: pygame.Surface, button: Union["Button", "PropertyButton", "Change_Poss_Bid_Button"], game: monopoly.Monopoly, prop: monopoly.GameTileType):
     if button.active(game, prop):
         if button.effect is in_jail_effect:
             button.active_image = draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, f"TURN #{game.player_turn.jail - 1} IN JAIL", (200, 0, 0))
@@ -1100,6 +1100,31 @@ def play_monopoly(game: monopoly.Monopoly):
                             
                             if button.effect is take_turn_effect:
                                 poss_tile = game.current_tile()
+                                card = None
+                                
+                                if isinstance(poss_tile, monopoly.Chance_Tile):
+                                    card = draw_chance_card(game.lastchance)
+                                if isinstance(poss_tile, monopoly.Community_Chest_Tile):
+                                    card = draw_community_chest_card(game.lastcommchest)
+                                while card:
+                                    cardrect = card.get_rect(center = (BORDER + BOARD_WINDOW // 2, BORDER + BOARD_WINDOW // 2))
+                                    surface.blit(card, cardrect)
+                                    draw_button_on_display(surface, DISMISS, game, selected_tile)
+                                    
+                                    pygame.display.update()
+
+                                    for event in events:
+                                        if event.type == pygame.QUIT:
+                                            pygame.quit()
+                                            sys.exit()
+                                        elif event.type == pygame.MOUSEBUTTONUP:
+                                            mouse_x, mouse_y = pygame.mouse.get_pos()
+                                        
+                                            if DISMISS.in_button((mouse_x, mouse_y)):
+                                                card = None
+                                                cover_event(surface)
+                                                pygame.display.update()
+
                             if button.effect is buy_property_effect:
                                 clear_player_display(surface)
                                 draw_player_label(surface, game.player_turn)
@@ -1152,14 +1177,29 @@ def play_monopoly(game: monopoly.Monopoly):
         clock.tick(12)
 
 
+def draw_chance_card(chance: monopoly.Chance_Card) -> pygame.Surface:
+    card = pygame.Surface((2 * TILE_HEIGHT, TILE_HEIGHT))
+    card.fill(CHANCE_CARD_COLOR)
+    chanceimg = pygame.image.load(chance.image)
+    chanceimg = pygame.transform.scale(chanceimg, (2 * TILE_HEIGHT, TILE_HEIGHT))
+    card.blit(chanceimg, (0, 0))
+    
+    return card
+def draw_community_chest_card(comm_chest: monopoly.Community_Chest_Card) -> pygame.Surface:
 
+    card = pygame.Surface((2 * TILE_HEIGHT, TILE_HEIGHT))
+    card.fill(COMMUNITY_CHEST_CARD_COLOR)
+    comm_chestimg = pygame.image.load(comm_chest.image)
+    comm_chestimg = pygame.transform.scale(comm_chestimg, (2 * TILE_HEIGHT, TILE_HEIGHT))
+    card.blit(comm_chestimg, (0, 0))
+    
+    return card
 
-
-
-
-
-
-
+def cover_event(surface: pygame.Surface):
+    cover = pygame.Surface((BOARD_WINDOW - 2 * TILE_HEIGHT - 1, BOARD_WINDOW - 2 * TILE_HEIGHT - 1))
+    cover.fill(BACKGROUND_COLOR)
+    coverrect = cover.get_rect(center = (BORDER + BOARD_WINDOW // 2, BORDER + BOARD_WINDOW // 2))
+    surface.blit(cover, coverrect)
 
 
 def start_display():

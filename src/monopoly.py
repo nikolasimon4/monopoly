@@ -381,7 +381,7 @@ def school_tax(game: "Monopoly"):
     game.center_money += 150
 
 CHANCE_DECK = {
-    0: Chance_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
+    0: Chance_Card("Advance to Go", "Go to go and collect $200", "images/Advance.png", 
         advance_to_go),
     1: Chance_Card("Go to Jail", "Go Directly to Jail", "jail.png",
         go_to_jail),
@@ -389,7 +389,7 @@ CHANCE_DECK = {
         school_tax)}
 
 COMMUNITY_CHEST_DECK = {
-    0: Community_Chest_Card("Advance to Go", "Go to go and collect $200", "advance.png", 
+    0: Community_Chest_Card("Advance to Go", "Go to go and collect $200", "images/Advance.png", 
         advance_to_go),
     1: Community_Chest_Card("Go to Jail", "Go Directly to Jail", "jail.png",
         go_to_jail),
@@ -552,7 +552,8 @@ class Monopoly():
         self.community_chest_deck = COMMUNITY_CHEST_DECK
         self.community_chest_order = [
             i for i in range(len(COMMUNITY_CHEST_DECK.keys()))]
-
+        self.lastchance = None
+        self.lastcommchest = None
         
         random.shuffle(self.chance_order) 
         random.shuffle(self.community_chest_order) 
@@ -725,14 +726,24 @@ class Monopoly():
             self.player_turn.money -= prop.rent() 
 
     def community_chest_landing(self) -> None:
-        cnum = self.community_chest_order.pop(0)
-        self.community_chest_order.append(cnum)
-        self.community_chest_deck[cnum].apply_card(self)
+        commnum = self.community_chest_order.pop()
+        self.community_chest_deck[commnum].apply_card(self)
+        self.lastcommchest = self.community_chest_deck[commnum]
+
+        if len(self.community_chest_order) == 0
+            self.community_chest_order = [
+            i for i in range(len(COMMUNITY_CHEST_DECK.keys()))]
+            random.shuffle(self.community_chest_order)
     
     def chance_landing(self) -> None:
-        cnum = self.chance_order.pop(0)
-        self.chance_order.append(cnum)
-        self.chance_deck[cnum].apply_card(self)
+        chancenum = self.chance_order.pop()
+        self.chance_deck[chancenum].apply_card(self)
+        self.lastchance = self.chance_deck[chancenum]
+
+        if len(self.chance_order) == 0
+            self.chance_order = [
+            i for i in range(len(CHANCE_DECK.keys()))]
+            random.shuffle(self.chance_order)
     
     def event_tile_landing(self, tile) -> None:
         tile.apply_tile(self)
