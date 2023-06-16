@@ -223,7 +223,7 @@ def draw_special_property_tile(prop: Union[monopoly.Utility, monopoly.Railroad])
     
     return tile_image
 
-def draw_chance_tile(ch_tile: monopoly.Chance_Tile) -> pygame.Surface:
+def draw_chance_tile(ch_tile: monopoly.ChanceTile) -> pygame.Surface:
     
     tile_image = empty_tile()
     
@@ -248,7 +248,7 @@ def draw_chance_tile(ch_tile: monopoly.Chance_Tile) -> pygame.Surface:
     tile_finish(tile_image)
     return tile_image
 
-def draw_community_tile(c_tile: monopoly.Community_Chest_Tile) -> pygame.Surface:
+def draw_community_tile(c_tile: monopoly.CommunityChestTile) -> pygame.Surface:
     
     tile_image = empty_tile()
     
@@ -277,7 +277,7 @@ def draw_community_tile(c_tile: monopoly.Community_Chest_Tile) -> pygame.Surface
     
     return tile_image
 
-def draw_event_tile(e_tile: monopoly.Event_Tile):
+def draw_event_tile(e_tile: monopoly.EventTile):
     tile_image = empty_tile()
     
     
@@ -304,7 +304,7 @@ def draw_event_tile(e_tile: monopoly.Event_Tile):
     
     return tile_image
 
-def draw_corner_tile(se_tile: monopoly.Event_Tile) -> pygame.Surface:
+def draw_corner_tile(se_tile: monopoly.EventTile) -> pygame.Surface:
     tile_image = pygame.Surface((TILE_HEIGHT, TILE_HEIGHT))
     
     tile_image.fill(BACKGROUND_COLOR)
@@ -370,7 +370,7 @@ def draw_tile_onto_display(surface: pygame.Surface, tile: monopoly.GameTileType)
     quad, dist = tile.pos
 
     if dist == 9:
-        assert isinstance(tile, monopoly.Event_Tile)
+        assert isinstance(tile, monopoly.EventTile)
         drawn = draw_corner_tile(tile)
         quad = (quad + 1) % 4 #Change for rots bcs rot deps on rot of pngs
 
@@ -378,12 +378,12 @@ def draw_tile_onto_display(surface: pygame.Surface, tile: monopoly.GameTileType)
         drawn = draw_property_tile(tile)
     elif isinstance(tile, monopoly.Railroad) or isinstance(tile, monopoly.Utility):
         drawn = draw_special_property_tile(tile)
-    elif isinstance(tile, monopoly.Community_Chest_Tile):
+    elif isinstance(tile, monopoly.CommunityChestTile):
         drawn = draw_community_tile(tile)
-    elif isinstance(tile, monopoly.Chance_Tile):
+    elif isinstance(tile, monopoly.ChanceTile):
         drawn = draw_chance_tile(tile)
         
-    elif isinstance(tile, monopoly.Event_Tile):
+    elif isinstance(tile, monopoly.EventTile):
         drawn = draw_event_tile(tile)
 
     if quad == 1:
@@ -1115,7 +1115,7 @@ def play_monopoly(game: monopoly.Monopoly):
                                 card = None
                                 prevloc = game.ploc[game.turn]
                                 
-                                if isinstance(game.landed, monopoly.Chance_Tile):
+                                if isinstance(game.landed, monopoly.ChanceTile):
                                     game.ploc[game.turn] = game.landed.pos
                                     card = draw_chance_card(game.lastchance)
                                     draw_dice(surface, game)
@@ -1124,7 +1124,7 @@ def play_monopoly(game: monopoly.Monopoly):
                                     affected_tiles.append(game.landed)
                                     draw_tile_onto_display(surface, game.board[prevloc[0]][prevloc[1]])
 
-                                if isinstance(game.landed, monopoly.Community_Chest_Tile):
+                                if isinstance(game.landed, monopoly.CommunityChestTile):
                                     game.ploc[game.turn] = game.landed.pos
                                     card = draw_community_chest_card(game.lastcommchest)
                                     draw_dice(surface, game)
