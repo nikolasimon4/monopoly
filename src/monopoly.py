@@ -137,6 +137,7 @@ class Property(Tile):
         if self.mortgaged:
             return 0
         elif self.monop and self.houses == 0:
+            # Rent is 2x if the monopoly is owned but the prop is undeveloped
             return self.rents[self.houses] * 2
         else:
             return self.rents[self.houses]
@@ -674,7 +675,6 @@ class Player():
             self.proplist.append(tempdict[propnum])
 
 
-
 # Auction Class
 
 class Auction():
@@ -757,7 +757,7 @@ class Auction():
             self.game.player_turn.proplist.append(self.prop)
 
             self.game.isauction = False
-            self.game.auction = None
+            self.game.__auction = None
             
 
             self.game.turn = self.saveturn
@@ -775,6 +775,11 @@ class Auction():
 # Class to represent a game of Monopoly
 
 class Monopoly():
+    """
+    Object that represents the game itself, holding all of the neccasary
+    attributes and tile objects and functions to play a game of monopoly
+    """
+
     pdict: Dict[int, Player]
     ploc: Dict[int, Tuple[int, int]]
     turn: int
@@ -789,17 +794,81 @@ class Monopoly():
     inactive_players: List[int]
     done: bool
     turn_taken: bool
-    auction: Optional[Auction]
+    __auction: Optional[Auction]
     isauction: bool
     chance_deck: Dict[int, Chance_Card]
     community_chest_deck: Dict[int, Community_Chest_Card]
     chance_order: List[int]
     community_chest_order: List[int]
     poss_bid: int
-
+    landed: Optional[GameTileType]
+    lastchance: Optional[Chance_Card]
+    lastcommchest: Optional[Community_Chest_Card]
 
     def __init__(self, num_players: int, startcash: int = 1500):
-        
+        """
+        Initializes the monopoly object
+
+        Parameters:
+            num_players: int: The number of players that should be in the game
+            startcash: int: The starting amount of money for each player (
+                defaults to $1500)
+        Non-Parameter Attributes:
+            self.d1: int: the value of the first die that was rolled
+            self.d2: int: the value of the second die that was rolled
+            self.pdict: Dict[int, Player]: A dictionary mapping player numbers
+                to player objects
+            self.ploc: Dict[int, Tuple[int, int]]: A dictionary mapping
+                player number to the player's location
+            self.turn: int: The player number of the current player who's turn
+                it is
+            self.houses: int: the number of houses available for purchase
+            self.hotels: int: the number of hotels available for purchase
+            self.board: List[List[GameTileType]]: A deepcopy of startboard
+                which serves as the list of tiles/property objects for the game
+            self.prop_dict: Dict[int, BuyableTileType]: A dictionary that maps
+                property numbers to the specific buyable tile objects used in the game
+            self.center_money: int: the amount of money that has been confiscated
+                through fines and put into the center, the player who lands on
+                free parking collects this money
+            self.turn_count: The amount of rolls that the current player has done
+                since the beginnning of their turn, if it hits 3 (meaning 3 doubles
+                in a row), the player is sent to jail and the next player takes
+                their turn
+            self.active_players: List[int]: A list of the player numbers of
+                players who haven't gone bankrupt
+            self.inactive_players: List[int]: A list of the player numbers of
+                players who have gone bankrupt
+            self.done: bool: True if the game is done, False otherwise
+            self.turn_taken: bool: Keeps track of whether the player has
+                completed all possible rolls this turn
+            self.__auction: Optional[Auction]: The auction object for the auction
+                that is currently underway (None if no auction is currently
+                happening)
+            self.isauction: bool: True if there is an auction happening
+            self.poss_bid: int: The current bid that is being proposed by the
+                player who's turn it is
+            self.chance_deck: Dict[int, Chance_Card]: The dictionary of chance
+                cards for the game
+            self.chance_order: List[int]: The list of integers representing the
+                order of the chance deck (it gets randomized at the beginning
+                and when the entire chance deck is run through)
+            self.community_chest_deck: Dict[int, Community_Chest_Card]: The 
+                dictionary of community_chest cards for the game
+            self.community_chest_order: List[int]: The list of integers 
+                representing the order of the community chest deck (it gets 
+                randomized at the beginning and when the entire deck is run
+                through)
+            self.landed: Optional[GameTileType]: The last tile that was landed
+                on
+            self.lastchance: Optional[Chance_Card]: The chance card that was just drawn
+            self.lastcommchest: Optional[Community_Chest_Card]: The last
+                communitychest card that was drawn
+            
+            
+
+
+        """
         assert num_players >= 2, "Must have at least 2 players"
 
         self.d1: int = 1
@@ -831,7 +900,7 @@ class Monopoly():
         self.turn_taken = False
         
         
-        self.auction = None
+        self.__auction = None
         self.isauction = False
         self.poss_bid = 1
 
@@ -856,36 +925,22 @@ class Monopoly():
         
         self.player_turn = self.pdict[1]
 
-    def make_auction(self, prop: BuyableTileType) -> None:
-        self.auction = Auction(prop, self)
-    
-    def bid(self) -> None:
-        assert self.isauction, "There is no auction currently happening"
-        assert self.auction is not None
-        assert self.player_turn.money >= self.poss_bid, "You do not have enough money"
-        assert self.poss_bid > self.auction.current_bid, "You must bid more than the current bid"
+    # Current Gamestate Methods
 
-        self.auction.bid(self.poss_bid)
-    def can_bid(self) -> bool:
-        return self.isauction and (self.auction is not None) and self.player_turn.money >= self.poss_bid and self.poss_bid > self.auction.current_bid
+    def current_tile(self) -> GameTileType:
+        
 
-    def change_poss_bid(self, inc: int) -> None:
-        assert self.isauction, "There is no auction currently happening"
-        assert self.auction is not None
-        assert self.player_turn.money >= self.poss_bid + inc, "You do not have enough money"
-        assert self.poss_bid + inc > self.auction.current_bid, "You must bid more than the current bid"
-        self.poss_bid += inc
-    
-    def can_change_poss_bid(self, inc: int) -> bool:
-        return (self.isauction 
-            and self.auction is not None
-            and self.player_turn.money >= self.poss_bid + inc 
-            and self.poss_bid + inc > self.auction.current_bid)
+        player = self.player_turn
+        
+        pnum = player.pnum
+        cloc = self.ploc[pnum]
 
-    def withdraw(self) -> None:
-        assert self.isauction, "There is no auction currently happening"
-        assert self.auction is not None, "Cannot withdraw from a nonexistant auction"
-        self.auction.quit_auction()
+        quad, dist = cloc
+       
+        return self.board[quad][dist]
+
+
+    # Auction Methods
     
     def can_start_auction(self, prop: GameTileType) -> bool:
         cur_tile = self.current_tile()
@@ -903,6 +958,14 @@ class Monopoly():
         return True
 
     def start_auction(self) -> None:
+        """
+        Starts an auction for the current tile
+        Raises:
+            AssertionError if it would violate the rules to start an auction on
+                the currrent tile (not a buyable tile, tile is owned, or there
+                is an auction already ongoing)
+        """
+        
         cur_tile = self.current_tile()
         assert (isinstance(cur_tile, Property) 
             or isinstance(cur_tile, Railroad) 
@@ -910,10 +973,80 @@ class Monopoly():
         assert cur_tile.owner is None, "Can't auction an owned property"
         assert not self.isauction, "The auction is already ongoing"
         
-        self.make_auction(cur_tile)
+        self.__auction = Auction(cur_tile, self)
 
+    def bid(self) -> None:
+        """
+        Bids the current "poss_bid" in the auction
+        Raises:
+            AssertionError if the bid is not legal (no auction going on, 
+            current player can't afford the bid, the proposed bid is <= the 
+            current bid)
+        """
+
+        assert self.isauction, "There is no auction currently happening"
+        assert self.__auction is not None
+        assert self.player_turn.money >= self.poss_bid, "You do not have enough money"
+        assert self.poss_bid > self.__auction.current_bid, "You must bid more than the current bid"
+
+        self.__auction.bid(self.poss_bid)
+    
+    def can_bid(self) -> bool:
+        """
+        Returns whether the current player can bid the current poss_bid
+        """
+        return self.isauction and (self.__auction is not None) and self.player_turn.money >= self.poss_bid and self.poss_bid > self.__auction.current_bid
+
+    def change_poss_bid(self, inc: int) -> None:
+        """
+        Changes the poss bid by the inputted inc
+        Inputs:
+            inc: int: The amount to increment the possible bid by
+        Raises:
+            AssertionError if the change is not legal (There is no auction, 
+                the player would not be able to pay for that bid, the current
+                bid is more than what the incremented possible bid would be)
+        """
+        assert self.isauction, "There is no auction currently happening"
+        assert self.__auction is not None
+        assert self.player_turn.money >= self.poss_bid + inc, "You do not have enough money"
+        assert self.poss_bid + inc > self.__auction.current_bid, "You must bid more than the current bid"
+        self.poss_bid += inc
+    
+    def can_change_poss_bid(self, inc: int) -> bool:
+        """
+        Returns whether the given value is a legal change to possbid that would
+        allow the poss bid to become a legal bid
+        Inputs:
+            inc: int: The increment to return the legality of
+        """
+        return (self.isauction 
+            and self.__auction is not None
+            and self.player_turn.money >= self.poss_bid + inc 
+            and self.poss_bid + inc > self.__auction.current_bid)
+
+    def withdraw(self) -> None:
+        """
+        Withdraws the current player from the auction
+        Raises:
+            AssertionError if there is not auction going on
+        """
+        assert self.isauction, "There is no auction currently happening"
+        assert self.__auction is not None, "Cannot withdraw from a nonexistant auction"
+        self.__auction.quit_auction()
+
+    # Buyable Tile Methods
 
     def can_buy(self, tile: GameTileType) -> bool:
+        """
+        Returns whether the current player can buy the inputted tile
+
+        Inputs:
+            Tile: GameTileType: The tile in question
+        
+        Outputs: bool: True if the tile can be purchased by the current player, 
+            False otherwise
+        """
         return (
             (isinstance(tile, Property) or isinstance(tile, Utility) or 
             isinstance(tile, Railroad)) 
@@ -921,64 +1054,18 @@ class Monopoly():
             and (tile.owner is None) 
             and tile.price <= self.player_turn.money
             and not self.isauction)
-
-
-    def current_tile(self) -> GameTileType:
-        
-
-        player = self.player_turn
-        
-        pnum = player.pnum
-        cloc = self.ploc[pnum]
-
-        quad, dist = cloc
-       
-        return self.board[quad][dist]
-
-    def update_monopoly(self, player: Player) -> None:
-        count = {}
-        
-        for prop in player.proplist:
-            if isinstance(prop, Property):
-                if prop.colornum not in count:
-                    count[prop.colornum] = [prop]
-                else:
-                    count[prop.colornum].append(prop)
-        for colornum, colorlist in count.items():
-            if colornum == 0 or colornum == 7:
-                if len(colorlist) == 2:
-                    for prop in colorlist:
-                        prop.monop = True
-                else:
-                    for prop in colorlist:
-                        prop.monop = False
-            else:
-                if len(colorlist) == 3:
-                    for prop in colorlist:
-                        prop.monop = True
-                else:
-                    for prop in colorlist:
-                        prop.monop = False
-    def update_railroad(self, player: Player) -> None:
-        count = []
-        for prop in player.proplist:
-            if isinstance(prop, Railroad):
-                count.append(prop)
-        for railroad in count:
-            railroad.num_owned = len(count)
-
-    def update_utility(self, player: Player) -> None:
-        count = 0
-        for prop in player.proplist:
-            if isinstance(prop, Utility):
-                count += 1
-        if count == 2:
-            self.prop_dict[23].both = True # type: ignore
-            self.prop_dict[24].both = True # type: ignore
-        else:
-            self.prop_dict[23].both = False # type: ignore
-            self.prop_dict[24].both = False # type: ignore
+    
     def buy_property(self, prop: BuyableTileType) -> None:
+        """
+        Buys the inputted Buyable Tile if it is a tile that the current player
+        is allowed to buy
+
+        Inputs: 
+            prop: BuyableTileType: The property being bought
+        Raises:
+            AssertionError if it is not legal to buy the tile inputted
+        """
+        
         assert (isinstance(prop, Property) 
             or isinstance(prop, Utility) 
             or isinstance(prop, Railroad)), "This is not a buyable tile"
@@ -1003,6 +1090,75 @@ class Monopoly():
             self.update_railroad(self.player_turn)
         elif isinstance(prop, Property):
             self.update_monopoly(self.player_turn)
+
+    def update_monopoly(self, player: Player) -> None:
+        """
+        Updates the inputted player's Property objects if their monopoly status 
+            has changed
+
+        Inputs:
+            player: Player: The player whose properties need to be checked
+        """
+
+        count = {}
+        
+        for prop in player.proplist:
+            if isinstance(prop, Property):
+                if prop.colornum not in count:
+                    count[prop.colornum] = [prop]
+                else:
+                    count[prop.colornum].append(prop)
+        for colornum, colorlist in count.items():
+            if colornum == 0 or colornum == 7:
+                if len(colorlist) == 2:
+                    for prop in colorlist:
+                        prop.monop = True
+                else:
+                    for prop in colorlist:
+                        prop.monop = False
+            else:
+                if len(colorlist) == 3:
+                    for prop in colorlist:
+                        prop.monop = True
+                else:
+                    for prop in colorlist:
+                        prop.monop = False
+    
+    def update_railroad(self, player: Player) -> None:
+        """
+        Updates the inputted player's Railroad objects if the number owned status 
+            has changed
+
+        Inputs:
+            player: Player: The player whose Railroads need to be checked
+        """
+
+        count = []
+        for prop in player.proplist:
+            if isinstance(prop, Railroad):
+                count.append(prop)
+        for railroad in count:
+            railroad.num_owned = len(count)
+
+    def update_utility(self, player: Player) -> None:
+        """
+        Updates the inputted player's Utility objects if their both owned status
+            has changed
+        Inputs:
+            player: Player: The player whose Utilities need to be checked
+        """
+
+        count = 0
+        for prop in player.proplist:
+            if isinstance(prop, Utility):
+                count += 1
+        if count == 2:
+            self.prop_dict[23].both = True # type: ignore
+            self.prop_dict[24].both = True # type: ignore
+        else:
+            self.prop_dict[23].both = False # type: ignore
+            self.prop_dict[24].both = False # type: ignore
+    
         
     def utility_landing(self, prop: Utility) -> None:
         if prop.owner is not None:
@@ -1038,7 +1194,7 @@ class Monopoly():
     def event_tile_landing(self, tile) -> None:
         tile.apply_tile(self)
         
-    def roll_dice(self) -> None:
+    def __roll_dice(self) -> None:
         
         self.d1 = random.randint(1,6)
         self.d2 = random.randint(1,6)
@@ -1146,7 +1302,7 @@ class Monopoly():
 
         assert not self.in_debt(), "You must mortgage all properties and sell all houses"
 
-        self.roll_dice()
+        self.__roll_dice()
         
         if self.d1 != self.d2:
             self.turn_count = 0
