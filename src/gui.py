@@ -1211,7 +1211,7 @@ def play_monopoly(game: monopoly.Monopoly):
         clock.tick(12)
 
 
-def draw_chance_card(chance: monopoly.Chance_Card) -> pygame.Surface:
+def draw_chance_card(chance: monopoly.ChanceCard) -> pygame.Surface:
     card = pygame.Surface((2 * TILE_HEIGHT, TILE_HEIGHT))
     card.fill(CHANCE_CARD_COLOR)
     chanceimg = pygame.image.load(chance.image)
@@ -1219,7 +1219,7 @@ def draw_chance_card(chance: monopoly.Chance_Card) -> pygame.Surface:
     card.blit(chanceimg, (0, 0))
     
     return card
-def draw_community_chest_card(comm_chest: monopoly.Community_Chest_Card) -> pygame.Surface:
+def draw_community_chest_card(comm_chest: monopoly.CommunityChestCard) -> pygame.Surface:
 
     card = pygame.Surface((2 * TILE_HEIGHT, TILE_HEIGHT))
     card.fill(COMMUNITY_CHEST_CARD_COLOR)

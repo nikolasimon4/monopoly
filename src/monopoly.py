@@ -961,7 +961,7 @@ class Monopoly():
 
     def can_start_auction(self, prop: GameTileType) -> bool:
         cur_tile = self.current_tile()
-        if not isinstance(cur_tile, (Property, Railroad, Utility))
+        if not isinstance(cur_tile, (Property, Railroad, Utility)):
             return False
         if not cur_tile is prop:
             return False
@@ -1060,7 +1060,8 @@ class Monopoly():
         Outputs: bool: True if the tile can be purchased by the current player,
             False otherwise
         """
-        return (isinstance(cur_tile, (Property, Railroad, Utility))
+        
+        return (isinstance(tile, (Property, Railroad, Utility))
             and (tile.pos == self.ploc[self.turn])
             and (tile.owner is None)
             and tile.price <= self.player_turn.money
@@ -1077,7 +1078,7 @@ class Monopoly():
             AssertionError if it is not legal to buy the tile inputted
         """
 
-        assert isinstance(cur_tile, (Property, Railroad, Utility)), "This is not a buyable tile"
+        assert isinstance(prop, (Property, Railroad, Utility)), "This is not a buyable tile"
         assert (prop.pos == self.ploc[self.turn]), "You cannot buy a property you do not occupy"
         assert prop.owner is None, "You cannot buy a property someone already owns"
         assert self.player_turn.money >= prop.price, "You cannot afford this tile, mortgage properties to raise money or put it up for auction"
