@@ -17,8 +17,14 @@ A Type representing one of the game tiles
 GameTileType = Union["Property", "Railroad", "Utility", 
     "Community_Chest_Tile", "Chance_Tile", "Event_Tile"]
 
+"""
+A Type representing buyable tiles
+"""
+BuyableTileType = Union["Property", "Utility", "Railroad"]
+
+
 # RGB Values for each property
-RGBDICT = {
+RGBDICT: Dict[int, Tuple[int, int, int]] = {
     1: (75, 0, 130),
     2: (75, 0, 130),
     3: (135, 206, 250),
@@ -44,22 +50,63 @@ RGBDICT = {
 
 
 # Tile Base Class
+
+
 class Tile():
+    """
+    A class representing a basic game-tile
+    Parameters:
+        name: str: The name of the tile
+        pos: Tuple[int, int]: A tuple representing the (quadrant, distance 
+            along the quadrant) on the game board
+        image: imagetype: a pathway that specifies the image displayed on the tile
+    """
+
     def __init__(self, name: str, pos: Tuple[int, int], image: imagetype):
         self.name = name
         self.pos = pos
         self.image = image
 
 
-
 # Properties 
 
+
 class Property(Tile):
+    """
+    A class representing a color property tile
+    """
 
-
-    def __init__(self, name: str, pos: Tuple[int, int], image: str, 
-        propnum: int, cost, r0: int, r1: int, r2: int, r3: int, r4: int, 
+    def __init__(self, name: str, pos: Tuple[int, int], image: imagetype, 
+        propnum: int, cost: int, r0: int, r1: int, r2: int, r3: int, r4: int, 
         rh: int, hp: int):
+        
+        """
+        Parameters:
+            name, pos, image: see tile base class
+
+            propnum: int: The property number associated with it in the property 
+                dictionary created below
+            cost: int: the purchase price of the property
+            r0 - r4: int: The rent paid on the property with the following number
+                referring to the number of houses (eg. r0 is rent with 0 houses, 
+                r1 is rent with 1 house...)
+            rh: int: Rent paid if there is a hotel on the property
+            hp: int: House Price, the price to build a house on the property
+        
+        Non-Parameter Attributes:
+            self.rents: Dict[int, int]: A dictionary to store the associated rents
+            self.houses: int: The number of houses on the property
+            self.owner: Optional[Player]: The player object that owns the property
+            self.mortgage_price: int: The amount the property can be mortgaged for
+            self.mortgaged: bool: Whether the property is mortgaged or not
+            self.color: Tuple[int, int, int]: The RGB value associated with the 
+                property's color group
+            self.colornum: int: The integer representation of the property's color 
+                group (eg. Baltic + Med. = group 0, light blues = group 1...)
+            self.monop: bool: Whether the owner of the property owns all the others
+                of the same color group (None notes the absence of an owner and thus
+                the absence of a monopoly)
+        """
 
         super().__init__(name, pos, image)
         self.propnum = propnum
@@ -77,23 +124,37 @@ class Property(Tile):
 
         self.houses = 0
         self.owner: Optional["Player"] = None
-        self.morgage_price = cost // 2
-        self.morgaged = False
+        self.mortgage_price = cost // 2
+        self.mortgaged = False
         self.color = RGBDICT[self.propnum]
         self.colornum = propnum // 3
         self.monop: bool = False
+    
     def rent(self) -> int:
-        
-        if self.morgaged:
+        """
+        The rent paid if someone lands on this property
+        """
+        if self.mortgaged:
             return 0
         elif self.monop and self.houses == 0:
             return self.rents[self.houses] * 2
         else:
             return self.rents[self.houses]
+    
     def build_house(self) -> None:
+        """
+        Increases the number of houses by 1
+        """
         self.houses += 1
+    
     def remove_house(self) -> None:
+        """
+        Decreases the number of houses by 1
+        """
         self.houses -= 1
+
+
+### Construction of individual property objects (Thanks chatgpt) ###
 
 # Brown Properties
 mediterranean_ave = Property("Mediterranean Avenue", (0, 0), 
@@ -164,22 +225,44 @@ park_place = Property("Park Place", (3, 6), "images/DARK_BLUE.png",
 boardwalk = Property("Boardwalk", (3, 8), "images/DARK_BLUE.png",
                     22, 400, 50, 200, 600, 1400, 1700, 2000, 200)
 
+
 # Utilities
 
+
 class Utility(Tile):
+    """
+    A class to represent utility tiles
+    """
+
     def __init__(self, name: str, pos: Tuple[int, int], image: str,
         propnum: int):
+        """
+        Parameters:
+            name, pos, image: see tile base class
+            propnum: int: The property number associated with the utility in the 
+            propdict below
+        Non-Parameter Attributes:
+            self.price: int: The price of the utility
+            self.owner: Player: the player object that owns the utility
+            self.both: bool: Whether both utilities are owned by the same player
+            self.mortgage_price: int: The money gained when mortgaging the utility
+            self.mortgaged: bool: Whether the utility is mortgaged
+        """
+
         super().__init__(name, pos, image)
         self.price = 150
         self.propnum = propnum
         
         self.owner: Optional["Player"] = None
         self.both = False
-        self.morgage_price = 75
-        self.morgaged = False
+        self.mortgage_price = self.price // 2
+        self.mortgaged = False
 
     def rent(self, dieroll: int) -> int:
-        if self.morgaged:
+        """
+        Rent charged for landing on the utility
+        """
+        if self.mortgaged:
             return 0
 
         elif self.both:
@@ -187,6 +270,9 @@ class Utility(Tile):
         
         else:
             return dieroll * 4
+
+
+### Construction of individual utility tiles ###
 
 ELECTRIC_COMPANY = Utility("Electric Company", (1,1), "images/Better_Electric.png", 
                             23)
@@ -196,17 +282,39 @@ WATER_WORKS = Utility("Water Works", (2,7), "images/WATERWORKS.png",
 
 # Railroads 
 
+
 class Railroad(Tile):
+    """
+    A class representing railroad tiles
+    """
     def __init__(self, name: str, pos: Tuple[int, int], image: imagetype,
         propnum: int):
+        
+        """
+        Parameters:
+            name, pos, image: see tile base class
+            propnum: int: The property number associated with the railroad in the 
+            propdict below
+        Non-Parameter Attributes:
+            self.price: int: The price of the railroad
+            self.owner: Player: the player object that owns the utility
+            self.num_owned: int: The number of total railroads owned by the player
+                who owns this railroad
+            self.mortgage_price: int: The money gained when mortgaging the railroad
+            self.mortgaged: bool: Whether the railroad is mortgaged
+            self.rents: Dict[int, int]: A dictionary mapping the number of railroads
+                owned to the rent charged
+        """
+
         super().__init__(name, pos, image)
+        
         self.price = 200
         self.propnum = propnum
         self.owner: Optional["Player"] = None
 
         self.num_owned = 1
-        self.morgage_price = 100
-        self.morgaged = False
+        self.mortgage_price = 100
+        self.mortgaged = False
 
         self.rents = {1: 25,
             2: 50, 
@@ -214,10 +322,17 @@ class Railroad(Tile):
             4: 200}
         
     def rent(self) -> int:
-        if self.morgaged:
+        """
+        Rent charged for landing on this property
+        """
+
+        if self.mortgaged:
             return 0
         else:
             return self.rents[self.num_owned]
+
+
+### Construction of individual railroads ###
 
 READING_RAILROAD = Railroad("Reading Railroad", (0, 4), "images/RAILROAD.png",
     25)
@@ -228,14 +343,35 @@ BO_RAILROAD = Railroad("B&O Railroad", (2, 4), "images/RAILROAD.png",
 SHORTLINE_RAILROAD = Railroad("Shortline Railroad", (3, 4), "images/RAILROAD.png",
     28)
 
+
 # Card Tiles
 
+
 class Community_Chest_Tile(Tile):
+    """
+    Class for representing a community chest tile
+    """
     def __init__(self, pos: Tuple[int, int]):
+        """
+        See Tile base class
+        """
         super().__init__("Community Chest", pos, "images/COMMUNITY_CHEST.png" )
+
+
 class Chance_Tile(Tile):
+    """
+    Class for representing a chance tile
+    """
+    
     def __init__(self, pos: Tuple[int, int]):
+        """
+        See Tile base class
+        """
+        
         super().__init__("Chance", pos, "images/CHANCE.png" )
+
+
+### Construction of community chest/chance tiles ###
 
 COMMUNITY_CHEST_TILE1 = Community_Chest_Tile((0,1))
 COMMUNITY_CHEST_TILE2 = Community_Chest_Tile((1,6))
@@ -248,26 +384,66 @@ CHANCE_TILE3 = Chance_Tile((3,5))
 # Event Tiles
 
 class Event_Tile(Tile):
+    """
+    Class to represent the event_tiles
+    """
     def __init__(self, name: str, pos: Tuple[int, int], image: imagetype, 
         effect: Callable[["Monopoly"], None]):
+        """
+        Parameters:
+            name, pos, image: see tile base class
+            effect: Callable[["Monopoly"], None]: The effect that landing on the tile has on the game
+        """
         super().__init__(name, pos, image)
         self.effect = effect
+    
     def apply_tile(self, game: "Monopoly"):
         self.effect(game)
 
 def go_tile(game: "Monopoly"):
+    """
+    No effect
+    """
     pass
+
 def jail_tile(game:"Monopoly"):
+    """
+    No effect
+    """
     pass
+
 def free_parking(game: "Monopoly"):
+    """
+    Center money goes to landing player
+    """
     game.player_turn.money += game.center_money
     game.center_money = 0
+
 def go_to_jail_tile(game: "Monopoly"):
+    """
+    Sends the landing player to jail
+    """
     game.send_jail()
+
 def income_tax(game: "Monopoly"):
-    game.player_turn.money -= 200
-    game.center_money += 200
+    """
+    Puts the lesser of 10%/$200 of the player's money in the center
+    """
+    pct = .1 * game.player_turn.money
+    for prop in game.player_turn.proplist:
+        if prop.mortgaged:
+            continue
+        else:
+            pct += prop.mortgage_price * .1
+    pct = round(pct)
+    
+    game.player_turn.money -= min(pct, 200)
+    game.center_money += min(pct, 200)
+
 def luxury_tax(game: "Monopoly"):
+    """
+    Puts 75 of the landing player's money in the center
+    """
     game.player_turn.money -= 75
     game.center_money += 200
 
@@ -278,8 +454,13 @@ GO_TO_JAIL = Event_Tile("Go to Jail", (2,9), "images/GO_TO_JAIL.png", go_to_jail
 INCOME_TAX = Event_Tile("Income Tax", (0,3), "images/INCOME_TAX.png", income_tax)
 LUXURY_TAX = Event_Tile("Luxury Tax", (3,7), "images/LUXURY_TAX.png", luxury_tax)
 
-# Game Board + Property Dictionary
-
+# Game Board
+"""
+STARTBOARD: List[List[GameTileType]]: A List of Lists with each list representing
+    a quadrant, and each item within a quadrant list being a game tile, starting 
+    with mediterranean at STARTBOARD[0][0] and going all the way to the GO_TILE 
+    at [3][9]
+"""
 STARTBOARD: List[List[GameTileType]] = [
     # Quadrant 0
     [mediterranean_ave, COMMUNITY_CHEST_TILE1, baltic_ave, INCOME_TAX, 
@@ -298,6 +479,12 @@ STARTBOARD: List[List[GameTileType]] = [
         SHORTLINE_RAILROAD, CHANCE_TILE3, park_place, LUXURY_TAX, 
         boardwalk, GO_TILE]
         ]
+
+# Property Dictionary
+"""
+PROPDICT: Dict[int, BuyableTileType]: A dictionary that maps
+    property numbers to buyable tile objects
+"""
 PROPDICT = {
     1: mediterranean_ave,
     2: baltic_ave,
@@ -329,25 +516,24 @@ PROPDICT = {
     28: SHORTLINE_RAILROAD}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Chance + Commmunity Chest Decks
 
 
 class Event_Card():
-    def __init__(self, name: str, description: str, image: str, 
+    """
+    Base class to represent chance/commchest cards
+    """
+
+    def __init__(self, name: str, description: str, image: imagetype, 
         effect: Callable[["Monopoly"], None]):
+        """
+        name: str: Name of the event card
+        description: str: Description of it's effect
+        image: imagetype: Image associated with the card 
+            (image should be a 1 x 2 aspect ratio representing the entire card)
+        effect: Callable[["Monopoly"], None]): Function that applies an effect
+            on the game
+        """
         
         self.name = name
         self.description = description
@@ -355,30 +541,62 @@ class Event_Card():
         self.effect = effect
     
     def apply_card(self, game: "Monopoly"):
+        """
+        Function that applies the effect of the card on the game
+        """
         self.effect(game)
 
 
 class Chance_Card(Event_Card):
+    """
+    Object that represents a chance card 
+    """
     def __init__(self, name: str, description: str, image: str, 
         effect: Callable[["Monopoly"], None]):
+        """
+        See event card docstring
+        """
         
         super().__init__(name, description, image, effect)
 
 
 class Community_Chest_Card(Event_Card):
+    """
+    Object representing a community chest card
+    """
     def __init__(self, name: str, description: str, image: str, 
         effect: Callable[["Monopoly"], None]):
+        """
+        See event card docstring
+        """
         
         super().__init__(name, description, image, effect)
 
 def advance_to_go(game: "Monopoly"):
+    """
+    Moves the player to go and gives them $200
+    """
     game.passgo()
     game.ploc[game.turn] = (3,9)
 def go_to_jail(game: "Monopoly"):
+    """
+    Sends the player to jail
+    """
     game.send_jail()
 def school_tax(game: "Monopoly"):
+    """
+    Charges the player $150 school tax
+    """
     game.player_turn.money -= 150
     game.center_money += 150
+
+
+
+"""
+CHANCE_DECK: Dict[int: Chance_Card]: Dictionary mapping integers to Chance_Card
+    objects, allowing the creation and shuffling of a chance deck as a list of
+    integers
+"""
 
 CHANCE_DECK = {
     0: Chance_Card("Advance to Go", "Go to go and collect $200", "images/Advance.png", 
@@ -388,6 +606,12 @@ CHANCE_DECK = {
     #2: Chance_Card("School Tax", "Pay school tax of $150", "school_tax.png", 
      #   school_tax)
     }
+
+"""
+COMMUNITY_CHEST_DECK: Dict[int: Community_Chest_Card]: Dictionary mapping 
+    integers to Community_Chest_Card objects, allowing the creation and 
+    shuffling of a community chest deck as a list of ntegers
+"""
 
 COMMUNITY_CHEST_DECK = {
     0: Community_Chest_Card("Advance to Go", "Go to go and collect $200", "images/Advance.png", 
@@ -399,27 +623,47 @@ COMMUNITY_CHEST_DECK = {
        }
 
 
+# Player Class
 
-        
-
-class Piece():
-    def __init__(self, name: str, image: imagetype):
-        self.name = name
-        self.image = image
-
-
-# Class to represent individual players
 
 class Player():
+    """
+    Class to represent individual players
+    """
+
     def __init__(self, pnum: int, money: int):
+        """
+        Parameters:
+            pnum: int: player number
+            money: int: The amount of money the player has
+        Non-Parameter Attributes:
+            self.proplist: List[BuyableTileType]: A containing all the property
+                objects that the player owns
+            self.jail: int: An integer representing the number of turns in jail 
+                + 1, with 0 representing being out of jail, 1 representing the 
+                turn they were put in jail, 2 representing their 1st turn in 
+                jail, through 4 representing their 3rd turn in jail
+            self.get_out: bool: a boolean tracking whether the player has a
+                get out of jail free card
+        """
+
         self.pnum = pnum
         self.money = money
-        self.proplist: List[Union[Property, Utility, Railroad]] = []
+        self.proplist: List[BuyableTileType] = []
         self.jail: int = 0
         self.get_out: bool = False
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns a string of the player in the form "Player player.pnum"
+        """
         return f"Player {str(self.pnum)}"
-    def sort_prop_list(self):
+    def sort_prop_list(self) -> None:
+        """
+        Sorts the player's property list by ordering the properties by property number
+        (It is easily optimizable by implementing a binary search algorithm which
+        can get done at some point as it would technically be more efficent, but
+        is not urgent because the list size never goes over 30) 
+        """
         tempdict = {}
         for prop in self.proplist:
             tempdict[prop.propnum] = prop
@@ -431,19 +675,50 @@ class Player():
 
 
 
-# Class to represent an auction
+# Auction Class
 
 class Auction():
-    def __init__(self, prop: Union[Property, Utility, Railroad], game: "Monopoly"):
-        self.saveturn = copy.deepcopy(game.turn)
+    """
+    Class to represent and perform the functions of a monopoly auction
+    It uses the game to keep track of the auction and saves the things it
+    changes in it's attributes:
+    Changes:
+        game.turn: changes the game's turn, using it to represent the player
+            who is currently bidding
+        game.active/inactive_players: changes the active and inactive player
+            lists to represent the players who have not withdrawn from the
+            auction
+    """
+    def __init__(self, prop: BuyableTileType, game: "Monopoly"):
+        """
+        Parameters:
+            prop: The property being auctioned
+            game: The game the auction is being done for
+        Non-Parameter Attributes:
+            self.save_turn: int: The turn of the game when the auction started
+            self.active_players: List[int]: The list of player numbers that were
+                active players when the auction was started
+            self.inactive_players: List[int]: Same as above but for inactive
+                players
+            self.current_bid: int: The current highest bid for the auction
+        """
+
+        self.saveturn = game.turn
         self.active_players = copy.deepcopy(game.active_players)
         self.inactive_players = copy.deepcopy(game.inactive_players)
         self.game = game
         self.prop = prop
-        self.game.isauction = True
+        self.game.isauction = True        
         self.current_bid: int = 0
     
-    def bid(self, val: int):
+    def bid(self, val: int) -> None:
+        """
+        Changes the current bid to the inputted value, and modulates the game's
+        turn until a player active in the auction is reached
+        
+        Inputs:
+            val: int: the value being bid
+        """
         
         self.current_bid = val
         
@@ -453,16 +728,27 @@ class Auction():
             self.game.turn = self.game.turn % self.game.num_players + 1
         
         self.game.player_turn = self.game.pdict[self.game.turn]
- 
     
     def quit_auction(self):
+        """
+        Withdraws the current bidding player from auction contention, and checks
+            if that would end the auction (only 1 player left active) 
+        If 1 active player left:
+            Resets the game to the previous state, with the exception of the
+            auctioned property being owned by the winning player, and that money
+            being paid out of the winning player's funds
+        Else:
+            Continues the auction by modulating the turn until an active 
+            player is reached
+        """
+
         self.active_players.remove(self.game.turn)
         self.inactive_players.append(self.game.turn)
         if len(self.active_players) == 1:
             self.game.turn = self.game.turn % self.game.num_players + 1 
         
             while self.game.turn not in self.active_players:
-                self.game.turn = self.turn % self.game.num_players + 1
+                self.game.turn = self.game.turn % self.game.num_players + 1
             
             self.game.player_turn = self.game.pdict[self.game.turn]
 
@@ -482,7 +768,7 @@ class Auction():
             self.game.turn = self.game.turn % self.game.num_players + 1 
         
             while self.game.turn not in self.active_players:
-                self.game.turn = self.turn % self.game.num_players + 1
+                self.game.turn = self.game.turn % self.game.num_players + 1
             
             self.game.player_turn = self.game.pdict[self.game.turn]
 
@@ -570,7 +856,7 @@ class Monopoly():
         
         self.player_turn = self.pdict[1]
 
-    def make_auction(self, prop: Union[Property, Utility, Railroad]) -> None:
+    def make_auction(self, prop: BuyableTileType) -> None:
         self.auction = Auction(prop, self)
     
     def bid(self) -> None:
@@ -692,7 +978,7 @@ class Monopoly():
         else:
             self.prop_dict[23].both = False # type: ignore
             self.prop_dict[24].both = False # type: ignore
-    def buy_property(self, prop: Union[Property, Utility, Railroad]) -> None:
+    def buy_property(self, prop: BuyableTileType) -> None:
         assert (isinstance(prop, Property) 
             or isinstance(prop, Utility) 
             or isinstance(prop, Railroad)), "This is not a buyable tile"
@@ -700,9 +986,8 @@ class Monopoly():
             
         assert (prop.pos == self.ploc[self.turn]), "You cannot buy a property you do not occupy"
         assert prop.owner is None, "You cannot buy a property someone already owns"
-        assert self.player_turn.money >= prop.price, "You cannot afford this tile, morgage properties to raise money or put it up for auction"
+        assert self.player_turn.money >= prop.price, "You cannot afford this tile, mortgage properties to raise money or put it up for auction"
         assert not self.isauction, "You can't buy a property that is currently being auctioned"
-        propnum = prop.propnum
         
         self.player_turn.money -= prop.price
         self.player_turn.proplist.append(prop)
@@ -780,7 +1065,7 @@ class Monopoly():
         self.ploc[self.turn] = (new_quad, new_dist)
 
         self.landed = self.current_tile()
-        
+
         landed = self.landed
         
         if isinstance(landed, Property) or isinstance(landed, Railroad):
@@ -838,6 +1123,8 @@ class Monopoly():
             return False
         if self.player_turn.jail == 4:
             return False
+        if self.in_debt():
+            return False
         return True
     
     def take_turn(self) -> None:
@@ -857,7 +1144,7 @@ class Monopoly():
             assert not cur_tile.owner is None, "You must either start an auction or purchase the current property"
 
 
-        assert not self.in_debt(), "You must morgage all properties and sell all houses"
+        assert not self.in_debt(), "You must mortgage all properties and sell all houses"
 
         self.roll_dice()
         
@@ -899,7 +1186,7 @@ class Monopoly():
             
             for prop in self.player_turn.proplist:
 
-                bankrupt = bankrupt and prop.morgaged
+                bankrupt = bankrupt and prop.mortgaged
 
                 if isinstance(prop, Property):
                     bankrupt = bankrupt and (prop.houses == 0)
@@ -907,7 +1194,7 @@ class Monopoly():
         return bankrupt
 
 
-    def bankruptcy(self) -> None:
+    def declare_bankruptcy(self) -> None:
         
         
         cur_tile = self.current_tile()
@@ -925,7 +1212,7 @@ class Monopoly():
         if bankrupter is None:
             for prop in self.player_turn.proplist:
                 prop.owner = bankrupter
-                prop.morgaged = False
+                prop.mortgaged = False
                 if isinstance(prop, Property):
                     prop.monop = False
                 if isinstance(prop, Railroad):
@@ -945,40 +1232,55 @@ class Monopoly():
             bankrupter.money += self.player_turn.money
 
         self.active_players.remove(self.turn)
+        
         self.inactive_players.append(self.turn)
+        
+        self.landed = None
+        self.turn = self.turn % self.num_players + 1 
+        
+        while self.turn not in self.active_players:
+            self.turn = self.turn % self.num_players + 1
+        
+        self.player_turn = self.pdict[self.turn]
 
-    def can_morgage(self, prop: GameTileType) -> bool:
+        if len(self.active_players) == 1:
+            self.done = True
+
+        self.turn_taken = False
+
+
+    def can_mortgage(self, prop: GameTileType) -> bool:
         if not (isinstance(prop, Railroad) or isinstance(prop, Property) or isinstance(prop, Utility)):
             return False
-        return not prop.morgaged and prop.owner is self.player_turn
-    def morgage_property(self, prop: Union[Railroad, Property, Utility]) -> None:
+        return not prop.mortgaged and prop.owner is self.player_turn
+    def mortgage_property(self, prop: Union[Railroad, Property, Utility]) -> None:
         
         assert prop in self.player_turn.proplist, "You don't own this Property"
         
         
         
-        assert not prop.morgaged, "This property is already morgaged"
+        assert not prop.mortgaged, "This property is already mortgaged"
         
         if isinstance(prop, Property):
             assert prop.houses == 0, "You must sell all houses first"
 
-        prop.morgaged = True
-        self.player_turn.money += prop.morgage_price
-    def can_unmorgage(self, prop: GameTileType) -> bool:
+        prop.mortgaged = True
+        self.player_turn.money += prop.mortgage_price
+    def can_unmortgage(self, prop: GameTileType) -> bool:
         if not (isinstance(prop, Railroad) or isinstance(prop, Property) or isinstance(prop, Utility)):
             return False
-        return prop.morgaged and prop.owner is self.player_turn 
-    def unmorgage_property(self, prop: Union[Railroad, Property, Utility]) -> None:
+        return prop.mortgaged and prop.owner is self.player_turn 
+    def unmortgage_property(self, prop: Union[Railroad, Property, Utility]) -> None:
         assert prop in self.player_turn.proplist,("You don't own this Property")
         
-        assert prop.morgaged, "This property is not morgaged"
+        assert prop.mortgaged, "This property is not mortgaged"
         
-        assert self.player_turn.money >= (prop.morgage_price 
-            + prop.morgage_price // 10), "Not enough money"
+        assert self.player_turn.money >= (prop.mortgage_price 
+            + prop.mortgage_price // 10), "Not enough money"
 
-        prop.morgaged = False
-        self.player_turn.money -= prop.morgage_price 
-        self.player_turn.money -= prop.morgage_price // 10
+        prop.mortgaged = False
+        self.player_turn.money -= prop.mortgage_price 
+        self.player_turn.money -= prop.mortgage_price // 10
     
     def can_build(self, prop: GameTileType) -> bool:
         
@@ -990,7 +1292,7 @@ class Monopoly():
             return False
         if not prop.monop:
             return False
-        if prop.morgaged:
+        if prop.mortgaged:
             return False
         if prop.houses == 5:
             return False
@@ -1023,9 +1325,9 @@ class Monopoly():
         assert isinstance(prop2, Property)
         assert isinstance(prop3, Property)
         
-        if prop.houses - prop2.houses > 0 or prop2.morgaged:
+        if prop.houses - prop2.houses > 0 or prop2.mortgaged:
             return False
-        if prop.houses - prop3.houses > 0 or prop3.morgaged:
+        if prop.houses - prop3.houses > 0 or prop3.mortgaged:
             return False
         
         if self.player_turn.money <= prop.house_price:
@@ -1049,7 +1351,7 @@ class Monopoly():
         assert prop.monop, "You do not have a monopoly on this property"
         propnum = prop.propnum
         
-        assert not prop.morgaged, "This property is morgaged, unmorgage it to build"
+        assert not prop.mortgaged, "This property is mortgaged, unmortgage it to build"
         assert prop.houses <= 4, "There is already a hotel here"
 
         if 1 <= propnum <= 2:
@@ -1080,8 +1382,8 @@ class Monopoly():
         
         assert prop.houses - prop2.houses <= 0, f"Not enough houses on {prop2.name}"
         assert prop.houses - prop3.houses <= 0, f"Not enough houses on {prop3.name}"
-        assert not prop2.morgaged, f"{prop2.name} is morgaged, unmorgage it to build on this property"
-        assert not prop3.morgaged, f"{prop3.name} is morgaged, unmorgage it to build on this property"
+        assert not prop2.mortgaged, f"{prop2.name} is mortgaged, unmortgage it to build on this property"
+        assert not prop3.mortgaged, f"{prop3.name} is mortgaged, unmortgage it to build on this property"
         assert self.player_turn.money >= prop.house_price, "Not enough money"
         
         if prop.houses == 4:
@@ -1210,7 +1512,7 @@ class Monopoly():
             return False
         if not self.turn_taken:
             return False
-        if self.in_debt() and not self.is_bankrupt():
+        if self.in_debt():
             return False
         return True
 
@@ -1230,9 +1532,7 @@ class Monopoly():
         assert self.turn_count == 0, "You rolled doubles, you have to take another turn"
         assert self.turn_taken, "Your Turn Hasn't Been Taken"
         
-        if self.in_debt():
-            assert self.is_bankrupt(), "You must morgage all properties and sell all houses to declare bankruptcy"    
-            self.bankruptcy()
+        assert not self.in_debt(), "You must mortgage all properties and sell all houses to declare bankruptcy"    
         
         self.landed = None
         self.turn = self.turn % self.num_players + 1 

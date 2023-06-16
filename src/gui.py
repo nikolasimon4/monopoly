@@ -463,7 +463,7 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
         if row == 6:
             text = small_text.render('on dice', True, TEXT_COLOR)
         if row == 7:
-            text = small_text.render(f'Morgage Value:       ${prop.morgage_price}', True, TEXT_COLOR)
+            text = small_text.render(f'Mortgage Value:       ${prop.mortgage_price}', True, TEXT_COLOR)
         if row == 8:
             text = small_text.render(f'              Owner: {str(prop.owner)}', True, TEXT_COLOR)
         
@@ -472,24 +472,24 @@ def draw_utility_card(prop: monopoly.Utility) -> pygame.Surface:
             + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + LINE_WIDTH + 
             (small_spacing + FONTSIZE) * row))
         small_text.set_underline(False)
-    if prop.morgaged:
-        morgage_text = small_text.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
+    if prop.mortgaged:
+        mortgage_text = small_text.render(f"MORGAGED, PAY ${prop.mortgage_price + prop.mortgage_price // 10}", True, MORGAGE_WARNING_COLOR)
         
-        rect = morgage_text.get_rect(center = (PROPCARD_WIDTH // 2, PROPCARD_Y_PADDING 
+        rect = mortgage_text.get_rect(center = (PROPCARD_WIDTH // 2, PROPCARD_Y_PADDING 
             + height // 3 + PROPCARD_TEXT_SPACING + LINE_WIDTH 
             + PROPCARD_TEXT_SPACING + FONTSIZE + PROPCARD_TEXT_SPACING + LINE_WIDTH + 
             (small_spacing + FONTSIZE) * 9))
         
-        prop_card.blit(morgage_text, rect)
+        prop_card.blit(mortgage_text, rect)
 
-        morgage_text = small_text.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
+        mortgage_text = small_text.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
         
-        rect = morgage_text.get_rect(center = (PROPCARD_WIDTH // 2, PROPCARD_Y_PADDING 
+        rect = mortgage_text.get_rect(center = (PROPCARD_WIDTH // 2, PROPCARD_Y_PADDING 
             + height // 3 + PROPCARD_TEXT_SPACING + LINE_WIDTH 
             + PROPCARD_TEXT_SPACING + FONTSIZE + LINE_WIDTH + 
             (small_spacing + FONTSIZE) * 10))
         
-        prop_card.blit(morgage_text, rect)
+        prop_card.blit(mortgage_text, rect)
 
     pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
 
@@ -554,7 +554,7 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
         if row == 4:
             text = small_text.render(f'If 4    "     "     "                {prop.rents[row]}', True, TEXT_COLOR)
         if row == 5:
-            text = small_text.render(f'Morgage Value                ${prop.morgage_price}', True, TEXT_COLOR)
+            text = small_text.render(f'Mortgage Value                ${prop.mortgage_price}', True, TEXT_COLOR)
         if row == 6:
             text = small_text.render(f'Owner: {str(prop.owner)}', True, TEXT_COLOR)
         
@@ -564,19 +564,19 @@ def draw_railroad_card(prop: monopoly.Railroad) -> pygame.Surface:
             (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * row))
         small_text.set_underline(False)
 
-    if prop.morgaged:
+    if prop.mortgaged:
         
-        morgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
+        mortgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.mortgage_price + prop.mortgage_price // 10}", True, MORGAGE_WARNING_COLOR)
         
         
-        prop_card.blit(morgage_text,  (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+        prop_card.blit(mortgage_text,  (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
             + height // 3 + PROPCARD_TEXT_SPACING 
             + PROPCARD_TEXT_SPACING + FONTSIZE + LINE_WIDTH + 
             (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 7))
 
-        morgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
+        mortgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
 
-        prop_card.blit(morgage_text,   (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
+        prop_card.blit(mortgage_text,   (PROPCARD_X_PADDING, PROPCARD_Y_PADDING 
             + height // 3 
             + FONTSIZE + LINE_WIDTH + 
             (2 * PROPCARD_TEXT_SPACING + FONTSIZE) * 8 - PROPCARD_TEXT_SPACING))
@@ -621,7 +621,7 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
         if row == prop.houses:
             TILETEXT.set_underline(True)
             TILETEXT.set_bold(True)
-            if prop.morgaged:
+            if prop.mortgaged:
                 TILETEXT.set_strikethrough(True)
         
         if row == 0:
@@ -640,14 +640,14 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
         if row == prop.houses:
             TILETEXT.set_underline(False)
             TILETEXT.set_bold(False)
-            if prop.morgaged:
+            if prop.mortgaged:
                 TILETEXT.set_strikethrough(False)
 
 
     for i in range(6,10):
         
         if i == 6:
-            addin_text = TILETEXT.render(f"Morgage Value ${prop.morgage_price}", True, TEXT_COLOR)
+            addin_text = TILETEXT.render(f"Mortgage Value ${prop.mortgage_price}", True, TEXT_COLOR)
         if i == 7:
             addin_text = TILETEXT.render(f"Houses Cost ${prop.house_price} each", True, TEXT_COLOR)
         if i == 8:
@@ -662,23 +662,23 @@ def draw_property_card(prop: monopoly.Property) -> pygame.Surface:
         
         prop_card.blit(addin_text, addin_rect)
 
-    if prop.morgaged:
-        morgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.morgage_price + prop.morgage_price // 10}", True, MORGAGE_WARNING_COLOR)
+    if prop.mortgaged:
+        mortgage_text = TILETEXT.render(f"MORGAGED, PAY ${prop.mortgage_price + prop.mortgage_price // 10}", True, MORGAGE_WARNING_COLOR)
         
-        morgage_rect = morgage_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
+        mortgage_rect = mortgage_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
             + height // 5 + PROPCARD_TEXT_SPACING + FONTSIZE
             + 10 * (PROPCARD_TEXT_SPACING + FONTSIZE)))
         
-        prop_card.blit(morgage_text, morgage_rect)
+        prop_card.blit(mortgage_text, mortgage_rect)
 
-        morgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
+        mortgage_text = TILETEXT.render(f"TO UNMORGAGE", True, MORGAGE_WARNING_COLOR)
 
         
-        morgage_rect = morgage_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
+        mortgage_rect = mortgage_text.get_rect(center = (width // 2, PROPCARD_Y_PADDING 
             + height // 5 + PROPCARD_TEXT_SPACING + FONTSIZE
             + 11 * (PROPCARD_TEXT_SPACING + FONTSIZE)))
         
-        prop_card.blit(morgage_text, morgage_rect)
+        prop_card.blit(mortgage_text, mortgage_rect)
 
     pygame.draw.rect(prop_card, color = LINE_BORDER_COLOR, rect = (0,0,width,height), width = 2)
 
@@ -748,7 +748,11 @@ def draw_pieces(surface: pygame.Surface, game: monopoly.Monopoly):
     pcount: Dict[int, Dict[int, List[int]]]  = {}
 
     for pnum in range(1, game.num_players + 1):
+        if pnum not in game.active_players:
+            continue
+        
         quad, dist = game.ploc[pnum]
+        
         if quad in pcount:
             if dist in pcount[quad]:
                 pcount[quad][dist].append(pnum)
@@ -1054,19 +1058,26 @@ def play_monopoly(game: monopoly.Monopoly):
         if game.isauction:
             update_bids(game, surface)
         
-        if selected_tile.morgaged:
+        if selected_tile.mortgaged:
             active_buttons.discard(MORGAGE_PROPERTY)
             active_buttons.add(UNMORGAGE_PROPERTY)
-        if not selected_tile.morgaged:
+        if not selected_tile.mortgaged:
             active_buttons.add(MORGAGE_PROPERTY)
             active_buttons.discard(UNMORGAGE_PROPERTY)
-        if game.turn_taken:
+
+        if game.turn_taken and not game.is_bankrupt():
+            active_buttons.discard(BANKRUPTCY)
             active_buttons.discard(ROLL_DICE)
             active_buttons.add(END_TURN)
-        if not game.turn_taken:
-            active_buttons.add(ROLL_DICE)
+        if not game.turn_taken and not game.is_bankrupt():
+            active_buttons.discard(BANKRUPTCY)
             active_buttons.discard(END_TURN)
+            active_buttons.add(ROLL_DICE)
 
+        if game.is_bankrupt():
+            active_buttons.discard(ROLL_DICE)
+            active_buttons.discard(END_TURN)
+            active_buttons.add(BANKRUPTCY)
 
         if game.isauction:
             draw_buttons_onto_display(surface, auction_buttons, game, selected_tile)
@@ -1097,7 +1108,8 @@ def play_monopoly(game: monopoly.Monopoly):
                     if button.in_button((mouse_x, mouse_y)):
                         try:                            
                             affected_tiles = button.apply_effect(game, selected_tile)
-                            
+
+
                             if button.effect is take_turn_effect:
                                 poss_tile = game.current_tile()
                                 card = None
@@ -1107,6 +1119,8 @@ def play_monopoly(game: monopoly.Monopoly):
                                     game.ploc[game.turn] = game.landed.pos
                                     card = draw_chance_card(game.lastchance)
                                     draw_dice(surface, game)
+                                    for tile in affected_tiles:
+                                        draw_tile_onto_display(surface, tile)
                                     affected_tiles.append(game.landed)
                                     draw_tile_onto_display(surface, game.board[prevloc[0]][prevloc[1]])
 
@@ -1114,6 +1128,8 @@ def play_monopoly(game: monopoly.Monopoly):
                                     game.ploc[game.turn] = game.landed.pos
                                     card = draw_community_chest_card(game.lastcommchest)
                                     draw_dice(surface, game)
+                                    for tile in affected_tiles:
+                                        draw_tile_onto_display(surface, tile)
                                     affected_tiles.append(game.landed)
                                     draw_tile_onto_display(surface, game.board[prevloc[0]][prevloc[1]])
 
@@ -1394,44 +1410,44 @@ START_AUCTION = Button(
     draw_button(SMALL_BUTTON_WIDTH, BUTTON_HEIGHT, "Auction", INACTIVE_BUTTON_BACKGROUND),
     start_auction_effect, start_auction_legal)
 
-# Morgage Property Button
-def morgage_property_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+# Mortgage Property Button
+def mortgage_property_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
     
     if not(isinstance(prop, monopoly.Property) or isinstance(prop, monopoly.Utility) or isinstance(prop, monopoly.Railroad)):
-        raise AssertionError("Big Problem with morgage property effect")
+        raise AssertionError("Big Problem with mortgage property effect")
 
-    game.morgage_property(prop)
+    game.mortgage_property(prop)
     return [prop]
 
-def morgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+def mortgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     
-    return game.can_morgage(prop)
+    return game.can_mortgage(prop)
 
 MORGAGE_PROPERTY = Button(
     (PROPCARD_XPOS + BUTTON_PADDING, 
     PROPCARD_YPOS + PROPCARD_HEIGHT + 3 * BUTTON_PADDING + 2 * BUTTON_HEIGHT),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Morgage", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
-    morgage_property_effect, morgage_property_legal)
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Mortgage", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Mortgage", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    mortgage_property_effect, mortgage_property_legal)
 
-# Unmorgage Property Button
+# Unmortgage Property Button
 
-def unmorgage_property_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]: 
+def unmortgage_property_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]: 
     if not(isinstance(prop, monopoly.Property) or isinstance(prop, monopoly.Utility) or isinstance(prop, monopoly.Railroad)):
-        raise AssertionError("Big Problem with unmorgage prop effect")
-    game.unmorgage_property(prop)
+        raise AssertionError("Big Problem with unmortgage prop effect")
+    game.unmortgage_property(prop)
     return [prop]
 
-def unmorgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+def unmortgage_property_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
     
-    return game.can_unmorgage(prop)
+    return game.can_unmortgage(prop)
 
 UNMORGAGE_PROPERTY = Button(
     (PROPCARD_XPOS + BUTTON_PADDING, 
     PROPCARD_YPOS + PROPCARD_HEIGHT + 3 * BUTTON_PADDING + 2 * BUTTON_HEIGHT),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
-    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmorgage", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
-    unmorgage_property_effect, unmorgage_property_legal)
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmortgage", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT, "Unmortgage", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    unmortgage_property_effect, unmortgage_property_legal)
 
 # Take Turn Button (Roll Dice + Move)
 
@@ -1468,6 +1484,23 @@ END_TURN = Button(
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
     draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "END TURN", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
     end_turn_effect, end_turn_legal)
+
+# Declare Bankruptcy Button
+
+def declare_bankruptcy_effect(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> List[monopoly.GameTileType]:
+    affected_tiles = game.current_tile()
+    game.declare_bankruptcy()
+    return [affected_tiles]
+
+def declare_bankruptcy_legal(game: monopoly.Monopoly, prop: monopoly.GameTileType) -> bool:
+    return game.is_bankrupt()
+
+BANKRUPTCY = Button(
+    (PROPCARD_XPOS, 
+    DISPLAY_HEIGHT - BORDER - TILE_HEIGHT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "BANKRUPTCY", ACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    draw_button(BUTTON_WIDTH, BUTTON_HEIGHT * 2, "BANKRUPTCY", INACTIVE_BUTTON_BACKGROUND, BUTTON_FONT),
+    declare_bankruptcy_effect, declare_bankruptcy_legal)
 
 # In Jail "Button"
 
