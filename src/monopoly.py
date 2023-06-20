@@ -424,7 +424,7 @@ def go_to_jail_tile(game: "Monopoly"):
     """
     Sends the landing player to jail
     """
-    game.__send_jail()
+    game.send_jail()
 
 def income_tax(game: "Monopoly"):
     """
@@ -577,13 +577,13 @@ def advance_to_go(game: "Monopoly"):
     """
     Moves the player to go and gives them $200
     """
-    game.__passgo()
+    game.passgo()
     game.ploc[game.turn] = (3,9)
 def go_to_jail(game: "Monopoly"):
     """
     Sends the player to jail
     """
-    game.__send_jail()
+    game.send_jail()
 def school_tax(game: "Monopoly"):
     """
     Charges the player $150 school tax
@@ -677,6 +677,7 @@ class Player():
 
 # Auction Class
 
+
 class Auction():
     """
     Class to represent and perform the functions of a monopoly auction
@@ -757,7 +758,7 @@ class Auction():
             self.game.player_turn.proplist.append(self.prop)
 
             self.game.isauction = False
-            self.game.__auction = None
+            self.game.auction = None
 
 
             self.game.turn = self.saveturn
@@ -772,7 +773,9 @@ class Auction():
 
             self.game.player_turn = self.game.pdict[self.game.turn]
 
+
 # Class to represent a game of Monopoly
+
 
 class Monopoly():
     """
@@ -794,7 +797,7 @@ class Monopoly():
     inactive_players: List[int]
     done: bool
     turn_taken: bool
-    __auction: Optional[Auction]
+    auction: Optional[Auction]
     isauction: bool
     chance_deck: Dict[int, ChanceCard]
     community_chest_deck: Dict[int, CommunityChestCard]
@@ -842,7 +845,7 @@ class Monopoly():
             self.done: bool: True if the game is done, False otherwise
             self.turn_taken: bool: Keeps track of whether the player has
                 completed all possible rolls this turn
-            self.__auction: Optional[Auction]: The auction object for the auction
+            self.auction: Optional[Auction]: The auction object for the auction
                 that is currently underway (None if no auction is currently
                 happening)
             self.isauction: bool: True if there is an auction happening
@@ -900,7 +903,7 @@ class Monopoly():
         self.turn_taken = False
 
 
-        self.__auction = None
+        self.auction = None
         self.isauction = False
         self.poss_bid = 1
 
@@ -960,6 +963,16 @@ class Monopoly():
     # Auction Methods
 
     def can_start_auction(self, prop: GameTileType) -> bool:
+        """
+        Returns a boolean on whether the current player can start an auction on
+        the given property
+        
+        Inputs:
+            prop: GameTileType: The property being checked
+        Outputs:
+            True: If the current player can start an auction for the input prop
+            False: Otherwise
+        """
         cur_tile = self.current_tile()
         if not isinstance(cur_tile, (Property, Railroad, Utility)):
             return False
@@ -986,7 +999,7 @@ class Monopoly():
         assert cur_tile.owner is None, "Can't auction an owned property"
         assert not self.isauction, "The auction is already ongoing"
 
-        self.__auction = Auction(cur_tile, self)
+        self.auction = Auction(cur_tile, self)
 
     def bid(self) -> None:
         """
@@ -998,17 +1011,17 @@ class Monopoly():
         """
 
         assert self.isauction, "There is no auction currently happening"
-        assert self.__auction is not None
+        assert self.auction is not None
         assert self.player_turn.money >= self.poss_bid, "You do not have enough money"
-        assert self.poss_bid > self.__auction.current_bid, "You must bid more than the current bid"
+        assert self.poss_bid > self.auction.current_bid, "You must bid more than the current bid"
 
-        self.__auction.bid(self.poss_bid)
+        self.auction.bid(self.poss_bid)
 
     def can_bid(self) -> bool:
         """
         Returns whether the current player can bid the current poss_bid
         """
-        return self.isauction and (self.__auction is not None) and self.player_turn.money >= self.poss_bid and self.poss_bid > self.__auction.current_bid
+        return self.isauction and (self.auction is not None) and self.player_turn.money >= self.poss_bid and self.poss_bid > self.auction.current_bid
 
     def change_poss_bid(self, inc: int) -> None:
         """
@@ -1021,9 +1034,9 @@ class Monopoly():
                 bid is more than what the incremented possible bid would be)
         """
         assert self.isauction, "There is no auction currently happening"
-        assert self.__auction is not None
+        assert self.auction is not None
         assert self.player_turn.money >= self.poss_bid + inc, "You do not have enough money"
-        assert self.poss_bid + inc > self.__auction.current_bid, "You must bid more than the current bid"
+        assert self.poss_bid + inc > self.auction.current_bid, "You must bid more than the current bid"
         self.poss_bid += inc
 
     def can_change_poss_bid(self, inc: int) -> bool:
@@ -1034,9 +1047,9 @@ class Monopoly():
             inc: int: The increment to return the legality of
         """
         return (self.isauction
-            and self.__auction is not None
+            and self.auction is not None
             and self.player_turn.money >= self.poss_bid + inc
-            and self.poss_bid + inc > self.__auction.current_bid)
+            and self.poss_bid + inc > self.auction.current_bid)
 
     def withdraw(self) -> None:
         """
@@ -1045,59 +1058,10 @@ class Monopoly():
             AssertionError if there is not auction going on
         """
         assert self.isauction, "There is no auction currently happening"
-        assert self.__auction is not None, "Cannot withdraw from a nonexistant auction"
-        self.__auction.quit_auction()
+        assert self.auction is not None, "Cannot withdraw from a nonexistant auction"
+        self.auction.quit_auction()
 
-    # Buyable Tile Methods
-
-    def can_buy(self, tile: GameTileType) -> bool:
-        """
-        Returns whether the current player can buy the inputted tile
-
-        Inputs:
-            Tile: GameTileType: The tile in question
-
-        Outputs: bool: True if the tile can be purchased by the current player,
-            False otherwise
-        """
-        
-        return (isinstance(tile, (Property, Railroad, Utility))
-            and (tile.pos == self.ploc[self.turn])
-            and (tile.owner is None)
-            and tile.price <= self.player_turn.money
-            and not self.isauction)
-
-    def buy_property(self, prop: BuyableTileType) -> None:
-        """
-        Buys the inputted Buyable Tile if it is a tile that the current player
-        is allowed to buy
-
-        Inputs:
-            prop: BuyableTileType: The property being bought
-        Raises:
-            AssertionError if it is not legal to buy the tile inputted
-        """
-
-        assert isinstance(prop, (Property, Railroad, Utility)), "This is not a buyable tile"
-        assert (prop.pos == self.ploc[self.turn]), "You cannot buy a property you do not occupy"
-        assert prop.owner is None, "You cannot buy a property someone already owns"
-        assert self.player_turn.money >= prop.price, "You cannot afford this tile, mortgage properties to raise money or put it up for auction"
-        assert not self.isauction, "You can't buy a property that is currently being auctioned"
-
-        self.player_turn.money -= prop.price
-        self.player_turn.proplist.append(prop)
-        prop.owner = self.player_turn
-
-
-
-        if isinstance(prop, Utility):
-            self.update_utility(self.player_turn)
-
-
-        elif isinstance(prop, Railroad):
-            self.update_railroad(self.player_turn)
-        elif isinstance(prop, Property):
-            self.update_monopoly(self.player_turn)
+    # Update Player Property List Methods
 
     def update_monopoly(self, player: Player) -> None:
         """
@@ -1197,7 +1161,7 @@ class Monopoly():
         if ((quadrant + quadmove >= 4) or (new_quad == 3
             and new_dist == 9)) and not (quadrant == 3 and dist == 9):
 
-            self.__passgo()
+            self.passgo()
 
         self.ploc[self.turn] = (new_quad, new_dist)
 
@@ -1269,14 +1233,17 @@ class Monopoly():
 
         tile.apply_tile(self)
 
-    def __passgo(self) -> None:
+    def passgo(self) -> None:
         """
         The effect of passing go (landing is technically passing, but moving
         off of go is not passing)
         """
         self.player_turn.money += 200
 
-    def __send_jail(self) -> None:
+
+    # Jail Methods
+    
+    def send_jail(self) -> None:
         """
         Sends the current player who's turn it is to jail
         """
@@ -1299,12 +1266,25 @@ class Monopoly():
         self.player_turn.jail = 0
 
     def pay_50_get_out(self) -> None:
+        """
+        If the current player is in jail, subtracts 50 from their money and
+        removes them from jail
+
+        Raises:
+            AssertionError if the current player is not in jail
+        """
         assert self.player_turn.jail != 0, "You are not in jail"
-        assert self.player_turn.money >= 50, "You do not have enough money"
         self.player_turn.money -= 50
         self.player_turn.jail = 0
 
+    # Turn Methods
     def can_take_turn(self) -> bool:
+        """
+        Returns whether the current player can take their turn
+        
+        Outputs:
+            bool: True if the player can roll the dice and move, False otherwise
+        """
         if self.player_turn.money < 0:
             return False
         if self.isauction:
@@ -1323,6 +1303,20 @@ class Monopoly():
         return True
 
     def take_turn(self) -> None:
+        """
+        Rolls the dice and resolves any landing events that occur
+
+        Raises:
+            AssertionError:
+                if there is an auction going on
+                if the player has already taken their turn
+                if the game is over
+                if the player has spent 3 turns in jail and has to exit before
+                    taking their turn
+                if the current tile's owner is None (it either needs to be
+                    auctioned or purchased)
+                if the player is in debt
+        """
         assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
         assert not self.turn_taken, "Turn has already been taken"
         assert not self.done, "Game is Over"
@@ -1356,7 +1350,7 @@ class Monopoly():
                 self.turn_count += 1
 
                 if self.turn_count == 3:
-                    self.__send_jail()
+                    self.send_jail()
                     return
 
 
@@ -1367,11 +1361,68 @@ class Monopoly():
 
         self.__apply_move()
 
+    def can_end_turn(self) -> bool:
+        """
+        Returns whether the current player can end their turn
+        """
+        if self.isauction:
+            return False
+        cur_tile = self.current_tile()
+        if isinstance(cur_tile, (Property, Railroad, Utility)) and cur_tile.owner is None:
+            return False
+        if self.turn_count != 0:
+            return False
+        if not self.turn_taken:
+            return False
+        if self.in_debt():
+            return False
+        return True
+
+    def end_turn(self) -> None:
+        """
+        Ends the current players turn if possible, otherwise raises an 
+        assertionerror detailing why the action cannot be performed
+        """
+        assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
+        cur_tile = self.current_tile()
+
+        if isinstance(cur_tile, (Property, Railroad, Utility)):
+            assert not cur_tile.owner is None, "You must either start an auction or purchase the current property"
+
+
+
+
+        assert self.turn_count == 0, "You rolled doubles, you have to take another turn"
+        assert self.turn_taken, "Your Turn Hasn't Been Taken"
+
+        assert not self.in_debt(), "You must mortgage all properties and sell all houses to declare bankruptcy"
+
+        self.landed = None
+        self.turn = self.turn % self.num_players + 1
+
+        while self.turn not in self.active_players:
+            self.turn = self.turn % self.num_players + 1
+
+        self.player_turn = self.pdict[self.turn]
+
+        if len(self.active_players) == 1:
+            self.done = True
+
+        self.turn_taken = False
+
+    # Bankruptcy Methods
+
     def in_debt(self) -> bool:
+        """
+        Returns whether the current player has less than $0
+        """
         return self.player_turn.money < 0
 
-
     def is_bankrupt(self) -> bool:
+        """
+        Returns if the current player has morgaged all properties, sold all
+            houses, and is still in debt
+        """
         bankrupt = False
 
         if self.in_debt():
@@ -1386,9 +1437,14 @@ class Monopoly():
 
         return bankrupt
 
-
     def declare_bankruptcy(self) -> None:
-
+        """
+        Goes through the process of bankruptcy, removing the current player form
+            the active player list, turning over all of their properties to
+                the bank if they went in debt to the bank
+                the player who bankrupted them if they couldn't afford rent
+        Also moves on to the following player's turn
+        """
 
         cur_tile = self.current_tile()
 
@@ -1441,13 +1497,25 @@ class Monopoly():
 
         self.turn_taken = False
 
+    # Buyable Tile Methods
 
     def can_mortgage(self, prop: GameTileType) -> bool:
+        """
+        Returns whether the inputted tile can be morgaged by the current 
+        player
+        """
         if not (isinstance(prop, Railroad) or isinstance(prop, Property) or isinstance(prop, Utility)):
             return False
         return not prop.mortgaged and prop.owner is self.player_turn
+    
     def mortgage_property(self, prop: Union[Railroad, Property, Utility]) -> None:
+        """
+        Morgages the inputted buyable tile
 
+        Raises:
+            AssertionError if the property is not owned by the current player,
+                already morgaged, or has ouses on it
+        """
         assert prop in self.player_turn.proplist, "You don't own this Property"
 
 
@@ -1459,11 +1527,24 @@ class Monopoly():
 
         prop.mortgaged = True
         self.player_turn.money += prop.mortgage_price
+    
     def can_unmortgage(self, prop: GameTileType) -> bool:
+        """
+        Returns whether the inputted tile can be unmorgaged by the current 
+        player
+        """
         if not (isinstance(prop, Railroad) or isinstance(prop, Property) or isinstance(prop, Utility)):
             return False
         return prop.mortgaged and prop.owner is self.player_turn
+    
     def unmortgage_property(self, prop: Union[Railroad, Property, Utility]) -> None:
+        """
+        Unmorgages the inputted buyable tile
+
+        Raises:
+            AssertionError if the property is not owned by the current player,
+                not morgaged, or the player doesn't have the money.
+        """
         assert prop in self.player_turn.proplist,("You don't own this Property")
 
         assert prop.mortgaged, "This property is not mortgaged"
@@ -1476,6 +1557,9 @@ class Monopoly():
         self.player_turn.money -= prop.mortgage_price // 10
 
     def can_build(self, prop: GameTileType) -> bool:
+        """
+        Returns whether the current player can build on the given tile
+        """
 
         if not isinstance(prop, Property):
             return False
@@ -1533,10 +1617,11 @@ class Monopoly():
 
         return True
 
-
-
     def build_house(self, prop: Property):
-
+        """
+        Builds a house on the inputted property if possible, otherwise raises 
+            AssertionError if the action cannot be performed
+        """
         assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
 
         assert prop in self.player_turn.proplist, ("You don't own this Property")
@@ -1592,7 +1677,9 @@ class Monopoly():
         self.player_turn.money -= prop.house_price
 
     def can_sell(self, prop: GameTileType):
-
+        """
+        Returns whether the current player can sell a house on the inputted tile
+        """
         if not isinstance(prop, Property):
             return False
 
@@ -1638,7 +1725,10 @@ class Monopoly():
         return True
 
     def sell_house(self, prop: Property):
-
+        """
+        Sells a house on the inputted property if possible, otherwise raises
+        an assertionerror detailing the problem
+        """
         assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
 
         assert prop in self.player_turn.proplist, "You don't own this Property"
@@ -1689,53 +1779,51 @@ class Monopoly():
         prop.remove_house()
         self.player_turn.money += prop.house_price // 2
 
+    def can_buy(self, tile: GameTileType) -> bool:
+        """
+        Returns whether the current player can buy the inputted tile
+
+        Inputs:
+            Tile: GameTileType: The tile in question
+
+        Outputs: bool: True if the tile can be purchased by the current player,
+            False otherwise
+        """
+        
+        return (isinstance(tile, (Property, Railroad, Utility))
+            and (tile.pos == self.ploc[self.turn])
+            and (tile.owner is None)
+            and tile.price <= self.player_turn.money
+            and not self.isauction)
+
+    def buy_property(self, prop: BuyableTileType) -> None:
+        """
+        Buys the inputted Buyable Tile if it is a tile that the current player
+        is allowed to buy
+
+        Inputs:
+            prop: BuyableTileType: The property being bought
+        Raises:
+            AssertionError if it is not legal to buy the tile inputted
+        """
+
+        assert isinstance(prop, (Property, Railroad, Utility)), "This is not a buyable tile"
+        assert (prop.pos == self.ploc[self.turn]), "You cannot buy a property you do not occupy"
+        assert prop.owner is None, "You cannot buy a property someone already owns"
+        assert self.player_turn.money >= prop.price, "You cannot afford this tile, mortgage properties to raise money or put it up for auction"
+        assert not self.isauction, "You can't buy a property that is currently being auctioned"
+
+        self.player_turn.money -= prop.price
+        self.player_turn.proplist.append(prop)
+        prop.owner = self.player_turn
 
 
 
-    def can_end_turn(self) -> bool:
-        if self.isauction:
-            return False
-        cur_tile = self.current_tile()
-        if isinstance(cur_tile, (Property, Railroad, Utility)) and cur_tile.owner is None:
-            return False
-        if self.turn_count != 0:
-            return False
-        if not self.turn_taken:
-            return False
-        if self.in_debt():
-            return False
-        return True
-
-    def end_turn(self) -> None:
-
-        assert not self.isauction, "There is an auction in progress, please either bid or withdraw"
-        cur_tile = self.current_tile()
-
-        if isinstance(cur_tile, (Property, Railroad, Utility)):
-            assert not cur_tile.owner is None, "You must either start an auction or purchase the current property"
+        if isinstance(prop, Utility):
+            self.update_utility(self.player_turn)
 
 
-
-
-        assert self.turn_count == 0, "You rolled doubles, you have to take another turn"
-        assert self.turn_taken, "Your Turn Hasn't Been Taken"
-
-        assert not self.in_debt(), "You must mortgage all properties and sell all houses to declare bankruptcy"
-
-        self.landed = None
-        self.turn = self.turn % self.num_players + 1
-
-        while self.turn not in self.active_players:
-            self.turn = self.turn % self.num_players + 1
-
-        self.player_turn = self.pdict[self.turn]
-
-        if len(self.active_players) == 1:
-            self.done = True
-
-        self.turn_taken = False
-
-
-
-
-
+        elif isinstance(prop, Railroad):
+            self.update_railroad(self.player_turn)
+        elif isinstance(prop, Property):
+            self.update_monopoly(self.player_turn)
